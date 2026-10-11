@@ -146,7 +146,7 @@ async def stream_chat(body, state):
             + json.dumps(
                 {
                     "project": context,
-                    "memory": state.brain.notes(),
+                    "memory": getattr(state, "notes_brain", state.brain).notes(),
                     "history": state.brain.messages(body.conversation)[-12:],
                     "request": body.message,
                 },

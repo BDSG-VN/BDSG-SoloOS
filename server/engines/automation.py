@@ -6,7 +6,7 @@ import json
 import httpx
 
 
-async def generate(state, prompt):
+async def generate(state, prompt, *, source="workflow"):
     active = state.ai.setting("active_account", "gateway")
     if active == "claude-native":
         from server.engines.claude_native import stream_text
@@ -25,7 +25,7 @@ async def generate(state, prompt):
                     model,
                     "Produce a helpful Vietnamese draft. No tools are available. Never claim external actions occurred.",
                     [{"role": "user", "content": prompt}],
-                    source="workflow",
+                    source=source,
                 )
                 if item["type"] == "token"
             ]

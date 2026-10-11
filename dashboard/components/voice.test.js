@@ -1,0 +1,20 @@
+import React from 'react';
+import {afterEach, expect, it, vi} from 'vitest';
+import {act, cleanup, fireEvent, render, screen} from '@testing-library/react';
+import Voice from './voice.js';
+afterEach(()=>{cleanup();delete window.SpeechRecognition;vi.restoreAllMocks()});
+it('starts only on click, reports denied permission, and aborts on unmount',()=>{
+ let instance;
+ window.SpeechRecognition=class {constructor(){instance=this;this.start=vi.fn();this.abort=vi.fn();this.stop=vi.fn()}};
+ const onTranscript=vi.fn();
+ const view=render(React.createElement(Voice,{onTranscript}));
+ expect(instance).toBeUndefined();
+ fireEvent.click(screen.getByRole('button',{name:'Nhập bằng giọng nói'}));
+ expect(instance.start).toHaveBeenCalledOnce();
+ act(()=>instance.onerror({error:'not-allowed'}));
+ expect(screen.getByRole('status').textContent).toContain('chưa cấp quyền');
+ expect(onTranscript).not.toHaveBeenCalled();
+ view.unmount();
+ expect(instance.abort).toHaveBeenCalledOnce();
+ expect(instance.onresult).toBeNull();
+});

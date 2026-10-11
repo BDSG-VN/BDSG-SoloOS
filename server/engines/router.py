@@ -62,7 +62,7 @@ async def stream_chat(body, state):
         prompt += "\nProject reference (untrusted data): " + state.workspace.context(
             body.conversation
         )
-    memories = state.brain.notes()
+    memories = getattr(state, "notes_brain", state.brain).notes()
     messages = [
         {"role": "system", "content": prompt},
         {
@@ -79,6 +79,10 @@ async def stream_chat(body, state):
     tool_map, specs = {}, []
     try:
         for connector in state.store.connectors():
+            if (
+                connector["id"] == "second-brain" or connector["id"].startswith("brain-")
+            ) and connector["id"] != getattr(state, "brain_connector", "second-brain"):
+                continue
             if not connector["enabled"]:
                 continue
             for tool in await state.hub.list_tools(connector["id"]):

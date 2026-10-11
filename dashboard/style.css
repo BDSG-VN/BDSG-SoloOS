@@ -1194,3 +1194,8 @@ pre {
 .workspace-panel summary { cursor: pointer; line-height: 1.6; overflow-wrap: anywhere; }
 .workspace-panel textarea { min-height: 100px; width: 100%; }
 .workspace-panel pre { max-width: 100%; padding: 12px; background: #11151e; border-radius: 8px; }
+.workspace-panel a { color: #b8efb5; text-underline-offset: 3px; }
+.voice-controls { padding: 12px 24px; display: flex; flex-wrap: wrap; gap: 10px; }
+.voice-controls small { width: 100%; line-height: 1.5; color: #aab5c5; }
+.sidebar nav { min-height: 0; overflow-y: auto; flex-shrink: 1; }
+.sidebar .brand, .sidebar-bottom { flex-shrink: 0; }

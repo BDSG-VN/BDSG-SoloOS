@@ -128,7 +128,9 @@ async def stream_chatgpt(body, state):
             {
                 "role": "user",
                 "content": "Owned memory (data): "
-                + json.dumps(state.brain.notes(), ensure_ascii=False)[:30000],
+                + json.dumps(
+                    getattr(state, "notes_brain", state.brain).notes(), ensure_ascii=False
+                )[:30000],
             }
         ]
         inputs.extend(
@@ -139,6 +141,10 @@ async def stream_chatgpt(body, state):
         state.brain.add(body.conversation, "user", body.message)
         tool_map, definitions = {}, []
         for connector in state.store.connectors():
+            if (
+                connector["id"] == "second-brain" or connector["id"].startswith("brain-")
+            ) and connector["id"] != getattr(state, "brain_connector", "second-brain"):
+                continue
             if not connector["enabled"]:
                 continue
             for tool in await state.hub.list_tools(connector["id"]):

@@ -4,6 +4,7 @@ import asyncio
 import hmac
 import sys
 from contextlib import asynccontextmanager, suppress
+from types import SimpleNamespace
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,11 +17,12 @@ from server.api.security import COOKIE, mint_session, owner, principal, session_
 from server.config import ROOT, Settings
 from server.core.ai_accounts import AIAccounts
 from server.core.automation import Automation
-from server.core.brain import Brain
 from server.core.business import BusinessStore
 from server.core.cms import CMSStore, ConflictError
+from server.core.library import Library
 from server.core.mcp_hub import MCPHub
 from server.core.mcp_store import Connector, MCPStore, Permission, PolicyError
+from server.core.shares import Shares
 from server.core.tasks import TaskQueue
 from server.core.workspace import Workspace
 from server.engines.provider_specs import PROVIDERS
@@ -82,8 +84,12 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
         app.state.settings = config
         app.state.store = MCPStore(config.data_dir / "system/mcp.db", config.store_key)
         app.state.hub = hub_factory(app.state.store)
-        app.state.brain = Brain(config.data_dir / "brains/default_brain")
-        app.state.workspace = Workspace(config.data_dir / "system/workspace.db", app.state.brain)
+        app.state.library = Library(config.data_dir / "brains")
+        app.state.brain = app.state.library.brain("default")
+        app.state.workspace = Workspace(
+            config.data_dir / "system/workspace.db", app.state.brain, app.state.library
+        )
+        app.state.shares = Shares(config.data_dir / "system/shares.db")
         app.state.tasks = TaskQueue(config.data_dir / "system/tasks.db")
         app.state.business = BusinessStore(config.data_dir / "system/business.db", config.store_key)
         app.state.cms = CMSStore(config.data_dir / "system/cms.db", config.store_key)
@@ -162,7 +168,7 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
 
     app = FastAPI(
         title="BDSG Solo-OS",
-        version="0.3.0",
+        version="0.4.0",
         lifespan=lifespan,
         docs_url=None,
         redoc_url=None,
@@ -239,7 +245,7 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
 
     @app.get("/api/health")
     def health():
-        return {"status": "ok", "version": "0.3.0"}
+        return {"status": "ok", "version": "0.4.0"}
 
     @app.post("/api/session")
     def login(body: Login, request: Request, response: Response):
@@ -370,8 +376,13 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
         from server.engines.router import stream_chat
 
         request.app.state.workspace.context(body.conversation)
+        session = request.app.state.workspace.get("sessions", body.conversation)
+        brain_id = session.get("brain_id", "default")
+        scoped = SimpleNamespace(**request.app.state._state)
+        scoped.notes_brain = request.app.state.library.brain(brain_id)
+        scoped.brain_connector = "second-brain" if brain_id == "default" else "brain-" + brain_id
         return StreamingResponse(
-            stream_chat(body, request.app.state),
+            stream_chat(body, scoped),
             media_type="text/event-stream",
             headers={"X-Accel-Buffering": "no"},
         )
@@ -393,13 +404,31 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
     from server.api.automation import router as automation_router
     from server.api.cms import public as cms_public
     from server.api.cms import router as cms_router
+    from server.api.library import router as library_router
+    from server.api.shares import router as shares_router
     from server.api.workspace import router as workspace_router
 
+    app.include_router(shares_router)
+    app.include_router(library_router)
     app.include_router(automation_router)
     app.include_router(workspace_router)
     app.include_router(ai_router)
     app.include_router(cms_router)
     app.include_router(cms_public)
+
+    @app.get("/share/{token}")
+    def shared_page(token: str, request: Request):
+        from fastapi.responses import FileResponse
+
+        try:
+            request.app.state.shares.get(token)
+        except ValueError as exc:
+            raise HTTPException(404, str(exc)) from exc
+        return FileResponse(
+            ROOT / "dashboard/dist/index.html",
+            headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow"},
+        )
+
     dist = ROOT / "dashboard/dist"
     if dist.exists():
         app.mount("/", StaticFiles(directory=dist, html=True), name="dashboard")

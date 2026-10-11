@@ -21,14 +21,15 @@ class SessionInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     title: str = Field(default="Cuộc trò chuyện mới", min_length=1, max_length=200)
     project_id: str | None = None
+    brain_id: str = "default"
     pinned: bool = False
     archived: bool = False
     model: str = Field(default="solo-default", max_length=128)
 
 
 class Workspace:
-    def __init__(self, path: Path, brain):
-        self.path, self.brain = path, brain
+    def __init__(self, path: Path, brain, library=None):
+        self.path, self.brain, self.library = path, brain, library
         path.parent.mkdir(parents=True, exist_ok=True)
         with self.db() as db:
             db.executescript("""
@@ -94,6 +95,8 @@ class Workspace:
         assert kind in {"sessions", "projects"}
         if identifier:
             self.get(kind, identifier)
+        if kind == "sessions" and self.library:
+            self.library.brain(body.brain_id)
         if kind == "sessions" and body.project_id:
             self.get("projects", body.project_id)
         identifier = identifier or uuid.uuid4().hex

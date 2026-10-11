@@ -11,8 +11,8 @@
 | Grok/Antigravity/Gemini đăng nhập thuê bao | Chưa triển khai; cần xác minh phương thức chính thức từng nền tảng |
 | Cuộc trò chuyện, tìm kiếm, ghim, lưu trữ, xuất | Có backend và giao diện; xuất JSON, lưu dữ liệu riêng từng cuộc trò chuyện |
 | Dự án và bối cảnh dùng cho chat | Có; chưa có upload tài liệu riêng từng dự án |
-| Bộ nhớ Markdown, wiki, biểu đồ tri thức | Đã có nền tảng; chưa có nhiều brain và quản lý nguồn nhập đầy đủ |
-| Tự học, đề xuất ký ức, duyệt, lịch sử/hoàn tác | Chưa triển khai đầy đủ |
+| Bộ nhớ Markdown, wiki, biểu đồ tri thức | Có nhiều bộ nhớ độc lập, chọn theo cuộc trò chuyện, nhập Markdown/text; chưa có pipeline PDF/web và đồ thị tương tác |
+| Tự học, đề xuất ký ức, duyệt, lịch sử/hoàn tác | Có AI đề xuất từ lịch sử, chủ duyệt, phát hiện bản cũ, lịch sử và đề xuất khôi phục; AI thật chờ đăng nhập |
 | Kỹ năng và trợ lý | Tạo/sửa/tắt, gắn kỹ năng vào trợ lý, chụp cấu hình lúc bắt đầu quy trình |
 | Workflow nhiều bước | AI, ghi chú và MCP; checkpoint, kết quả, chờ phê duyệt, hủy các bước tiếp theo |
 | Lịch chạy | Lặp theo phút, bật/tạm dừng; chưa có biểu thức cron/múi giờ tùy chọn |
@@ -21,14 +21,14 @@
 | MCP permissions, danh sách cho phép, phê duyệt, audit | Đã có; chưa có OAuth tổng quát cho mọi MCP vendor |
 | CRM, inbox, marketing, sales, ticket, nhân sự, analytics | Đã có nền tảng nghiệp vụ; kênh thật phụ thuộc API/MCP được cấu hình |
 | Telegram, Slack, WhatsApp, Zalo, Lark bots | Chưa có adapter bot hoàn chỉnh cho từng nhà cung cấp |
-| Voice, STT/TTS, live voice | Chưa triển khai |
+| Voice, STT/TTS, live voice | Nhập/đọc qua Web Speech của trình duyệt; chưa nghiệm thu microphone thật hoặc live voice hội thoại |
 | Tạo ảnh/video bằng từng provider | Chưa triển khai |
 | Code workspace, PTY terminal, checkpoint git | Chưa triển khai |
 | Gói plugin, cài/gỡ, kho bí mật riêng | Chưa có plugin manager; credentials MCP/Gateway hiện có được mã hóa |
-| Backup GitHub hai chiều, import/export toàn brain | Chưa triển khai |
+| Backup GitHub hai chiều, import/export toàn brain | Xuất ZIP tài liệu và nhập từng Markdown/text; chưa có đồng bộ GitHub hoặc phục hồi toàn DB |
 | TOTP, quản lý API token/phiên đăng nhập | Có xác thực owner/agent, CSRF, revoke phiên hiện tại; chưa có UI TOTP/token manager |
-| Public share và thu hồi | Chưa triển khai |
-| PWA, thông báo push, linh vật, thương hiệu tùy chỉnh | Chưa triển khai đầy đủ |
+| Public share và thu hồi | Bản chụp chỉ đọc, token băm, hạn 1–30 ngày, chủ thu hồi; không tự cập nhật nội dung mới |
+| PWA, thông báo push, linh vật, thương hiệu tùy chỉnh | Manifest và trang mất mạng; không cache dữ liệu người dùng. Chưa nghiệm thu cài đặt đa thiết bị, push/linh vật/thương hiệu tùy chỉnh |
 | CMS tin tức/pages/homepage, AI biên tập | Đã có; AI sinh đề xuất, chủ sở hữu lưu và xuất bản |
 | Theo dõi sử dụng | Token/lượt/status ChatGPT theo model/nguồn; chưa có budget chung và giá thực trả |
 

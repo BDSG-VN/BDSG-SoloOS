@@ -14,6 +14,9 @@ import {
   Terminal,
 } from "lucide-react";
 import OpenUIRender, { soloUIPrompt } from "./components/openui_render.js";
+import SharedChat from "./components/shared_chat.js";
+import Voice from "./components/voice.js";
+import Library from "./components/library.js";
 import Automation from "./components/automation.js";
 import Sessions from "./components/sessions.js";
 import AIAccounts, { accountLanding } from "./components/ai_accounts.js";
@@ -50,6 +53,7 @@ const ICONS = {
   accounts: Plug,
   sessions: BookOpen,
   automation: CheckSquare,
+  library: BookOpen,
   brain: BookOpen,
   tasks: CheckSquare,
   mcp: Plug,
@@ -417,6 +421,8 @@ function App() {
       ),
     );
 
+  if (page === "library")
+    content = h(Library, { api, post, onDirtyChange: setCMSDirty });
   if (page === "automation") content = h(Automation, { api, post });
   if (page === "sessions")
     content = h(Sessions, {
@@ -593,6 +599,13 @@ function App() {
             }),
           ),
       ),
+      h(Voice, {
+        disabled: chatBusy,
+        onTranscript: (text) =>
+          setMessage((current) =>
+            (current + " " + text).trim().slice(0, 12000),
+          ),
+      }),
       h(
         "form",
         {
@@ -1106,11 +1119,17 @@ function App() {
       h(
         "footer",
         null,
-        "BDSG Foundation · MIT · v0.3",
+        "BDSG Foundation · MIT · v0.4",
         h("span", null, "RENT THE MODEL. OWN THE BRAIN."),
       ),
     ),
   );
 }
 
-createRoot(document.getElementById("root")).render(h(App));
+createRoot(document.getElementById("root")).render(
+  h(location.pathname.startsWith("/share/") ? SharedChat : App),
+);
+
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  navigator.serviceWorker.register("/sw.js").catch(() => {});
+}

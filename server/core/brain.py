@@ -1,5 +1,7 @@
 """Owned Markdown memory and SQLite conversation history with FTS5."""
 
+import fcntl
+import hashlib
 import sqlite3
 import time
 import uuid
@@ -18,6 +20,7 @@ class Brain:
                     id TEXT PRIMARY KEY, conversation TEXT NOT NULL, role TEXT NOT NULL,
                     content TEXT NOT NULL, at REAL NOT NULL);
                 CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(content, id UNINDEXED);
+                CREATE TABLE IF NOT EXISTS note_revisions(id TEXT PRIMARY KEY,path TEXT NOT NULL,content TEXT NOT NULL,created REAL NOT NULL);
             """)
 
     def add(self, conversation: str, role: str, content: str):
@@ -54,7 +57,33 @@ class Brain:
             raise ValueError("Markdown notes only")
         return path
 
-    def write_note(self, name: str, content: str):
+    def write_note(self, name: str, content: str, expected_hash=None):
         path = self.note_path(name)
-        path.write_text(content, encoding="utf-8")
+        with (self.root / ".notes.lock").open("a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            current = path.read_text() if path.exists() else ""
+            if (
+                expected_hash is not None
+                and hashlib.sha256(current.encode()).hexdigest() != expected_hash
+            ):
+                raise ValueError("Nội dung đã thay đổi sau khi đề xuất được tạo. Tạo đề xuất mới.")
+            with sqlite3.connect(self.db_path) as db:
+                db.execute(
+                    "INSERT INTO note_revisions VALUES(?,?,?,?)",
+                    (str(uuid.uuid4()), name, current, time.time()),
+                )
+            temporary = path.with_suffix(".md.tmp")
+            temporary.write_text(content, encoding="utf-8")
+            temporary.replace(path)
         return {"path": name, "saved": True}
+
+    def revisions(self, name):
+        self.note_path(name)
+        with sqlite3.connect(self.db_path) as db:
+            db.row_factory = sqlite3.Row
+            return [
+                dict(row)
+                for row in db.execute(
+                    "SELECT * FROM note_revisions WHERE path=? ORDER BY created DESC", (name,)
+                )
+            ]

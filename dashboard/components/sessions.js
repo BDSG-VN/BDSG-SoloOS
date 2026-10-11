@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from "react";
 const h = React.createElement;
 export default function Sessions({ api, post, onOpen }) {
+  const [shares, setShares] = useState([]),
+    [shareURL, setShareURL] = useState("");
+  const [brains, setBrains] = useState([]),
+    [brain, setBrain] = useState("default");
   const [sessions, setSessions] = useState([]),
     [projects, setProjects] = useState([]),
     [search, setSearch] = useState(""),
@@ -10,14 +14,18 @@ export default function Sessions({ api, post, onOpen }) {
     [project, setProject] = useState(""),
     [error, setError] = useState("");
   async function reload() {
-    const [s, p] = await Promise.all([
+    const [s, p, b, shared] = await Promise.all([
       api(
         `/workspace/sessions?archived=${archived}&search=${encodeURIComponent(search)}`,
       ),
       api("/workspace/projects"),
+      api("/library"),
+      api("/shares"),
     ]);
     setSessions(s);
     setProjects(p);
+    setBrains(b);
+    setShares(shared);
   }
   useEffect(() => {
     reload().catch((e) => setError(e.message));
@@ -79,11 +87,22 @@ export default function Sessions({ api, post, onOpen }) {
             run(async () => {
               const s = await post("/workspace/sessions", {
                 project_id: project || null,
+                brain_id: brain,
               });
               onOpen(s);
             }),
         },
         "Cuộc trò chuyện mới",
+      ),
+    ),
+    h(
+      "label",
+      null,
+      "Bộ nhớ cho cuộc trò chuyện mới",
+      h(
+        "select",
+        { value: brain, onChange: (e) => setBrain(e.target.value) },
+        ...brains.map((b) => h("option", { key: b.id, value: b.id }, b.title)),
       ),
     ),
     ...sessions.map((s) =>
@@ -120,6 +139,51 @@ export default function Sessions({ api, post, onOpen }) {
           { href: `/api/workspace/sessions/${s.id}/export`, download: true },
           "Xuất JSON",
         ),
+        h(
+          "button",
+          {
+            onClick: () => {
+              if (
+                window.confirm(
+                  "Tạo liên kết đọc toàn bộ nội dung cuộc trò chuyện trong 7 ngày? Bất kỳ ai có liên kết đều đọc được bản chụp này. Hãy kiểm tra thông tin riêng tư trước khi chia sẻ.",
+                )
+              )
+                run(async () => {
+                  const shared = await post("/shares", {
+                    conversation: s.id,
+                    days: 7,
+                  });
+                  setShareURL(shared.url);
+                });
+            },
+          },
+          "Tạo liên kết chia sẻ",
+        ),
+      ),
+    ),
+    shareURL &&
+      h(
+        "p",
+        null,
+        "Liên kết mới: ",
+        h(
+          "a",
+          { href: shareURL, target: "_blank", rel: "noreferrer" },
+          location.origin + shareURL,
+        ),
+      ),
+    h("h3", null, "Liên kết đã tạo"),
+    ...shares.map((s) =>
+      h(
+        "p",
+        { key: s.id },
+        `${s.title} · ${s.revoked ? "Đã thu hồi" : new Date(s.expires * 1000).toLocaleString()}`,
+        !s.revoked &&
+          h(
+            "button",
+            { onClick: () => run(() => post(`/shares/${s.id}`, {}, "DELETE")) },
+            "Thu hồi",
+          ),
       ),
     ),
     h("h3", null, "Tạo dự án"),

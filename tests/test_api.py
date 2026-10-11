@@ -176,3 +176,29 @@ def test_new_workspaces_are_owner_only_and_csrf_protected(client):
         client.post("/api/workspace/sessions", json={}, headers={"X-CSRF-Token": csrf}).status_code
         == 200
     )
+
+
+def test_library_scoped_sessions_and_public_snapshot_revocation(client):
+    headers = {"Authorization": "Bearer " + "o" * 40}
+    created = client.post("/api/library", headers=headers, json={"title": "Private brain"}).json()
+    identifier = created["id"]
+    session = client.post(
+        "/api/workspace/sessions",
+        headers=headers,
+        json={"title": "Private chat", "brain_id": identifier},
+    ).json()
+    bad = client.post(
+        "/api/library/default/learn", headers=headers, json={"conversation": session["id"]}
+    )
+    assert bad.status_code == 422
+    client.app.state.brain.add(session["id"], "user", "original snapshot")
+    share = client.post("/api/shares", headers=headers, json={"conversation": session["id"]}).json()
+    token = share["url"].split("/")[-1]
+    assert (
+        client.get("/api/shared/" + token).json()["messages"][0]["content"] == "original snapshot"
+    )
+    client.app.state.brain.add(session["id"], "user", "private later")
+    assert "private later" not in client.get("/api/shared/" + token).text
+    assert client.get("/api/shares").status_code == 401
+    assert client.delete("/api/shares/" + share["id"], headers=headers).status_code == 200
+    assert client.get("/api/shared/" + token).status_code == 404
