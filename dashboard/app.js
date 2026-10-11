@@ -26,6 +26,7 @@ import Voice from "./components/voice.js";
 import Library from "./components/library.js";
 import Automation from "./components/automation.js";
 import Sessions from "./components/sessions.js";
+import Profile from "./components/profile.js";
 import AIAccounts, { accountLanding } from "./components/ai_accounts.js";
 import CMSWorkspace from "./components/cms_workspace.js";
 import BusinessWorkspace from "./components/business_workspace.js";
@@ -279,7 +280,9 @@ function App() {
       2,
     ),
   );
-  const labels = messages[lang];
+  const labels = {...messages[lang], profile: "Tài khoản của tôi"};
+  const [ownerProfile, setOwnerProfile] = useState(null);
+  useEffect(() => { if(authenticated) api("/profile").then(setOwnerProfile).catch(() => {}); }, [authenticated]);
 
   const refresh = useCallback(async () => {
     const [ns, ts, cs, aps, hs, es] = await Promise.all([
@@ -520,6 +523,7 @@ function App() {
         setStream(null);
       },
     });
+  if (page === "profile") content = h(Profile, {api, post, onUpdate: setOwnerProfile, onDirtyChange: setCMSDirty, onLogout: () => {csrf = ""; setCMSDirty(false); setAuthenticated(false);}});
   if (page === "accounts")
     content = h(AIAccounts, {
       api,
@@ -1043,10 +1047,14 @@ function App() {
             h("small", null, "Markdown + SQLite trên máy chủ riêng"),
           ),
         ),
+        h("button", {className: "profile", disabled: chatBusy, onClick: () => setPage("profile"), "aria-label": "Tài khoản của tôi"},
+          h("span", {className: "avatar"}, (ownerProfile?.display_name || "TK").slice(0,2).toUpperCase()),
+          h("span", null, ownerProfile?.display_name || "Tài khoản của tôi", h("small", null, "Thông tin & mật khẩu"))),
         h(
           "button",
           {
             className: "profile",
+            "aria-label": "Đăng xuất",
             disabled: chatBusy,
             onClick: async () => {
               try {
@@ -1063,8 +1071,7 @@ function App() {
               }
             },
           },
-          h("span", { className: "avatar" }, "PT"),
-          h("span", null, "Phạm Văn Thư", h("small", null, "Chủ doanh nghiệp")),
+          h("span", null, "Đăng xuất"),
           h(LogOut, { size: 16 }),
         ),
       ),
@@ -1101,6 +1108,7 @@ function App() {
         h(
           "div",
           { className: "topbar-right" },
+          h("a", {href: "/", target: "_blank", rel: "noopener noreferrer", className: "text-button"}, "Mở website ↗"),
           h("span", { className: "status-dot" }),
           "Local-first",
           h(

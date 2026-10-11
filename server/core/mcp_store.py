@@ -229,6 +229,10 @@ class MCPStore:
                 is not None
             )
 
+    def revoke_all_sessions(self):
+        with self._db() as db:
+            db.execute("DELETE FROM sessions")
+
     def revoke_session(self, token_hash: str):
         with self._db() as db:
             db.execute("DELETE FROM sessions WHERE token_hash=?", (token_hash,))

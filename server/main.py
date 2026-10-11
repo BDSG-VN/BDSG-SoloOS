@@ -185,6 +185,9 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
     from server.api.members import router as members_router
 
     app.include_router(members_router)
+    from server.api.profile import router as profile_router
+
+    app.include_router(profile_router)
     # Middleware configuration is read at construction; production must provide env before import.
     config = settings or Settings.from_env()
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(config.hosts))
