@@ -8,7 +8,7 @@ import SwiftUI
         MenuBarExtra("SoloOS",systemImage:"sparkles") {
             Button("Làm mới trạng thái"){Task{await client.refresh()}}
             Text(client.connected ? "Đã ghép với SoloOS" : "Chưa ghép thiết bị")
-            Link("Mở quản trị web",destination:URL(string:"https://phamvanthu.com/admin")!)
+            if let base=try? SoloClient.baseURL(client.server) {Link("Mở quản trị web",destination:base.appendingPathComponent("admin"))}
         }
         #endif
     }
@@ -37,7 +37,7 @@ struct WorkView: View {
     @State private var title=""
     var body: some View {
         VStack {
-            HStack{TextField("Công việc mới",text:$title).textFieldStyle(.roundedBorder);Button("Thêm"){let value=title;title="";Task{await client.createTask(value)}}.disabled(title.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty)}.padding()
+            HStack{TextField("Công việc mới",text:$title).textFieldStyle(.roundedBorder);Button("Thêm"){let value=title;Task{if await client.createTask(value),title==value{title=""}}}.disabled(title.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty)}.padding()
             List(client.tasks){item in VStack(alignment:.leading,spacing:8){Text(item.title).font(.headline);Text(item.priority+(item.due.map{" · "+$0} ?? "")).font(.caption).foregroundStyle(.secondary);Picker("Trạng thái",selection:Binding(get:{item.state},set:{value in Task{await client.move(item,to:value)}})){Text("Cần làm").tag("todo");Text("Đang làm").tag("doing");Text("Hoàn tất").tag("done")}.pickerStyle(.segmented)}}
         }
     }

@@ -69,7 +69,7 @@ final class NoRedirects: NSObject, URLSessionTaskDelegate {
             notices=try JSONDecoder().decode(Operations.self,from:await data("api/operations")).notifications
         } catch {self.error=error.localizedDescription}
     }
-    func createTask(_ title:String) async { do {_ = try await data("api/tasks",method:"POST",body:["title":title]);await refresh()}catch{self.error=error.localizedDescription} }
+    func createTask(_ title:String) async -> Bool { do {_ = try await data("api/tasks",method:"POST",body:["title":title]);await refresh();return true}catch{self.error=error.localizedDescription;return false} }
     func move(_ item:WorkItem,to state:String) async {do{_ = try await data("api/tasks/"+item.id,method:"PATCH",body:["state":state]);await refresh()}catch{self.error=error.localizedDescription}}
     func loadChat() async {
         stop()

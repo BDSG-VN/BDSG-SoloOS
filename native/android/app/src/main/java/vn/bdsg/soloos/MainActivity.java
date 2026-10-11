@@ -24,7 +24,7 @@ public class MainActivity extends Activity {
  private void run(Work work){status.setText("Đang xử lý…");executor.execute(()->{try{work.run();}catch(Exception e){ui(()->status.setText(stopped?"Đã dừng.":e.getMessage()));}});}
  private void ui(Runnable action){runOnUiThread(()->{if(!isDestroyed()&&!isFinishing())action.run();});}
  private void show(){
-  ScrollView scroll=new ScrollView(this);root=new LinearLayout(this);root.setOrientation(1);root.setPadding(28,32,28,28);scroll.addView(root);setContentView(scroll);
+  ScrollView scroll=new ScrollView(this);root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(28,32,28,28);scroll.addView(root);setContentView(scroll);
   root.addView(text("BDSG SoloOS",28));status=text("",14);root.addView(status);
   if(token.isEmpty()){
    root.addView(text("Ghép thiết bị bằng mã dùng một lần trong mục Thiết bị & ứng dụng trên web.",16));EditText address=input("Máy chủ HTTPS",false);address.setText(server);root.addView(address);EditText code=input("Mã ghép thiết bị",true);root.addView(code);
@@ -32,7 +32,7 @@ public class MainActivity extends Activity {
   }
   LinearLayout nav=new LinearLayout(this);root.addView(nav);
   for(int i=0;i<3;i++){final int index=i;button(nav,new String[]{"AI","Công việc","Thiết bị"}[i],()->{stop();screen=index;show();});}
-  content=new LinearLayout(this);content.setOrientation(1);root.addView(content);
+  content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);root.addView(content);
   if(screen==0)chat();else if(screen==1)tasks();else device();
  }
  private String request(String path,String method,JSONObject body)throws Exception{
