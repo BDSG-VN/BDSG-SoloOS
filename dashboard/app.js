@@ -14,6 +14,7 @@ import {
   Terminal,
 } from "lucide-react";
 import OpenUIRender, { soloUIPrompt } from "./components/openui_render.js";
+import BusinessWorkspace from "./components/business_workspace.js";
 import KnowledgeGraph from "./components/knowledge_graph.js";
 import { messages } from "./i18n/index.js";
 import "./style.css";
@@ -39,6 +40,7 @@ const post = (path, data, method = "POST") =>
   api(path, { method, body: JSON.stringify(data) });
 const ICONS = {
   overview: LayoutDashboard,
+  business: LayoutDashboard,
   chat: Bot,
   brain: BookOpen,
   tasks: CheckSquare,
@@ -390,6 +392,20 @@ function App() {
       ),
     );
 
+  if (page === "business")
+    content = h(BusinessWorkspace, {
+      api,
+      post,
+      onPending: refresh,
+      onConfigure: (template) => {
+        setConnectorDraft(JSON.stringify(template, null, 2));
+        setPage("mcp");
+      },
+      onAskAI: (prompt) => {
+        setMessage(prompt);
+        setPage("chat");
+      },
+    });
   if (page === "chat")
     content = h(
       "div",

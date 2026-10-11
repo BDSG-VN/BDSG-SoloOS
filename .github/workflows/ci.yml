@@ -23,7 +23,7 @@ jobs:
       - run: npm run build
         working-directory: dashboard
       - run: uv run python scripts/init_env.py
-      - run: uv run uvicorn server.main:create_app --factory --env-file .env --host 127.0.0.1 --port 8000 > /tmp/soloos-api.log 2>&1 &
+      - run: .venv/bin/python -m uvicorn server.main:create_app --factory --env-file .env --host 127.0.0.1 --port 8000 > /tmp/soloos-api.log 2>&1 &
       - run: npx playwright install --with-deps chromium
         working-directory: dashboard
       - run: npm run test:e2e
@@ -49,5 +49,5 @@ jobs:
               file.write('BDSG_STORE_KEY=' + base64.urlsafe_b64encode(secrets.token_bytes(32)).decode() + '\n')
           PY
           docker run -d --name soloos --env-file /tmp/soloos.env -p 127.0.0.1:8080:8000 bdsg-soloos:test
-          curl --retry 20 --retry-delay 2 --retry-connrefused --fail http://127.0.0.1:8080/api/health
+          curl --retry 20 --retry-delay 2 --retry-connrefused --retry-all-errors --fail http://127.0.0.1:8080/api/health
           curl --fail http://127.0.0.1:8080/ | grep 'BDSG SoloOS'

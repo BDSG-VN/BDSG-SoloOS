@@ -1153,3 +1153,31 @@ pre {
     scroll-behavior: auto !important;
   }
 }
+
+.business-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 20px 0;
+}
+.business-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+.business-form {
+  display: grid;
+  gap: 12px;
+  margin: 20px 0;
+}
+.business-form label {
+  display: grid;
+  gap: 6px;
+}
+.business-grid article {
+  overflow-wrap: anywhere;
+}
+.business-grid button {
+  margin: 8px 8px 0 0;
+}

@@ -92,3 +92,13 @@ curl --fail https://phamvanthu.com/api/health
 Trong phiên phát triển, không có Docker Engine trên máy local; build/container
 smoke test được chạy qua GitHub Actions. DNS, TLS và LLM có khóa thật cần kiểm
 chứng trên máy chủ đích.
+
+## Kết nối nền tảng qua MCP chính thức
+
+Đọc [ma trận tích hợp](INTEGRATIONS.md) trước khi bật một kênh. Kết nối không tự cấp tài khoản, OAuth hay quyền API. Dashboard → Doanh nghiệp → Đa kênh mở mẫu MCP, sau đó lưu endpoint và credentials ở Kết nối MCP. Tên công cụ phải được xác nhận bằng discovery và chủ hệ thống xét duyệt vào allowlist. Mẫu mặc định tắt để tránh gọi tài khoản chưa được cấu hình.
+
+Bearer OAuth được lưu mã hóa trong `credentials.headers.Authorization` theo API connector; cần cấp/đổi token qua quy trình của nhà cung cấp. Bản đầu chưa có trình đăng nhập OAuth và tự làm mới token. Khi token hết hạn phải cập nhật credentials trước khi gọi tiếp.
+
+MCP Google Ads cần triển khai máy chủ chính thức của Google trước. Gmail MCP yêu cầu đủ điều kiện Developer Preview. Twilio MCP trong danh mục chỉ đọc tài liệu; không dùng để gọi điện/gửi SMS.
+
+Webhook `/api/business/webhooks/{channel}` là hợp đồng chuẩn hóa **của SoloOS**, dùng cho bridge đáng tin cậy do chủ hệ thống vận hành. Đây không phải endpoint nhận trực tiếp chữ ký Meta/Zalo. Bridge xác minh chữ ký native của nhà cung cấp trước, rồi gửi JSON `external_id`, `sender_id`, `sender_name`, `content`; headers `x-bdsg-timestamp` (Unix giây), `x-bdsg-signature` (hex HMAC-SHA256 của `timestamp + '.' + raw_body`). Khóa cấu hình ở Đa kênh, tối thiểu 32 ký tự. Cửa sổ 300 giây; tin nhắn trùng `channel/external_id` không được ghi lại. Không công khai khóa vào frontend.

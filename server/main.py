@@ -14,6 +14,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from server.api.security import COOKIE, mint_session, owner, principal, session_data, token_hash
 from server.config import ROOT, Settings
 from server.core.brain import Brain
+from server.core.business import BusinessStore
 from server.core.mcp_hub import MCPHub
 from server.core.mcp_store import Connector, MCPStore, Permission, PolicyError
 from server.core.tasks import TaskQueue
@@ -78,6 +79,7 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
         app.state.hub = hub_factory(app.state.store)
         app.state.brain = Brain(config.data_dir / "brains/default_brain")
         app.state.tasks = TaskQueue(config.data_dir / "system/tasks.db")
+        app.state.business = BusinessStore(config.data_dir / "system/business.db", config.store_key)
         if not any(c["id"] == "second-brain" for c in app.state.store.connectors()):
             app.state.store.put_connector(
                 Connector(
@@ -89,6 +91,35 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
                 ),
                 {"env": {"BDSG_BRAIN_DIR": str(app.state.brain.root), "PYTHONPATH": str(ROOT)}},
             )
+        for connector_id, permission, tools in (
+            (
+                "business-read",
+                Permission.READ_ONLY,
+                {"list_customers": True, "list_inbox": True, "business_analytics": True},
+            ),
+            (
+                "business-write",
+                Permission.REQUIRES_CONFIRMATION,
+                {"create_customer": False, "create_campaign": False, "create_ticket": False},
+            ),
+        ):
+            if not any(c["id"] == connector_id for c in app.state.store.connectors()):
+                app.state.store.put_connector(
+                    Connector(
+                        id=connector_id,
+                        command=sys.executable,
+                        args=["-m", "server.plugins.business_mcp"],
+                        permission=permission,
+                        tools=tools,
+                    ),
+                    {
+                        "env": {
+                            "BDSG_BUSINESS_DB": str(config.data_dir / "system/business.db"),
+                            "BDSG_STORE_KEY": config.store_key,
+                            "PYTHONPATH": str(ROOT),
+                        }
+                    },
+                )
         yield
 
     app = FastAPI(
@@ -223,10 +254,17 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
             raise PolicyError("Confirmation no longer pending")
         store.decide(confirmation_id, body.approved, "owner")
         if not body.approved:
+            request.app.state.business.settle_confirmation(confirmation_id, {"status": "rejected"})
             return {"status": "rejected"}
-        return await request.app.state.hub.execute_confirmation(
-            confirmation_id, actor=pending["payload"]["actor"]
-        )
+        try:
+            result = await request.app.state.hub.execute_confirmation(
+                confirmation_id, actor=pending["payload"]["actor"]
+            )
+        except BaseException:
+            request.app.state.business.settle_confirmation(confirmation_id, {"status": "uncertain"})
+            raise
+        request.app.state.business.settle_confirmation(confirmation_id, result)
+        return result
 
     @app.get("/api/brain", dependencies=[Depends(owner)])
     def notes(request: Request):
@@ -283,6 +321,11 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
             demo_stream(), media_type="text/event-stream", headers={"X-Accel-Buffering": "no"}
         )
 
+    from server.api.business import router as business_router
+    from server.api.business import webhooks
+
+    app.include_router(business_router)
+    app.include_router(webhooks)
     dist = ROOT / "dashboard/dist"
     if dist.exists():
         app.mount("/", StaticFiles(directory=dist, html=True), name="dashboard")
