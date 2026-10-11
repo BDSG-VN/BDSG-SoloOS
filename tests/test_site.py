@@ -120,3 +120,21 @@ def test_discovery_never_exposes_drafts(client):
     assert "/news/secret" in client.get("/sitemap.xml").text
     assert "Secret draft keyword" in client.get("/feed.xml").text
     assert "Disallow: /admin" in client.get("/robots.txt").text
+
+
+def test_theme_preview_is_private_escaped_and_does_not_write(client):
+    assert client.get("/api/cms/themes/personal/preview").status_code == 401
+    assert client.get("/api/cms/themes/personal/preview", headers=AGENT).status_code == 403
+    client.put("/api/cms/site", json={"title": "<script>unsafe</script>"}, headers=OWNER)
+    before = client.get("/api/cms/content", headers=OWNER).json()
+    for theme in client.get("/api/cms/themes", headers=OWNER).json():
+        result = client.get("/api/cms/themes/" + theme["id"] + "/preview", headers=OWNER)
+        assert result.status_code == 200
+        html = result.json()["html"]
+        assert "&lt;script&gt;unsafe&lt;/script&gt;" in html
+        assert "<script>" not in html
+        assert theme["headline"] in html
+        assert theme["accent"] in html
+    assert client.get("/api/cms/content", headers=OWNER).json() == before
+    assert client.get("/api/cms/site", headers=OWNER).json()["theme"] == "personal"
+    assert client.get("/api/cms/themes/unknown/preview", headers=OWNER).status_code == 404

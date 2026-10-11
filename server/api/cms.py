@@ -317,6 +317,14 @@ def themes():
     ]
 
 
+@router.get("/themes/{theme}/preview")
+def theme_preview(theme: str, request: Request):
+    if theme not in THEMES:
+        raise HTTPException(404, "Unknown theme")
+    site = site_settings(request.app.state.cms).model_copy(update={"theme": theme})
+    return {"html": document_page(template(theme, site.title), preview=True, site=site)}
+
+
 @router.post("/themes/{theme}/draft")
 def theme_draft(theme: str, request: Request):
     import uuid

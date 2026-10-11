@@ -31,6 +31,18 @@ test("public home and account remain separate from owner; templates are editable
   await expect(
     page.getByRole("button", { name: "Tạo trang từ mẫu" }),
   ).toHaveCount(8);
+  await expect(page.locator('.theme-thumbnail iframe')).toHaveCount(8);
+  await page.getByRole('button', {name: 'Xem trước', exact: true}).first().click();
+  const preview = page.getByRole('dialog');
+  await expect(preview).toBeVisible();
+  await expect(page.frameLocator('dialog iframe').getByRole('heading', {name: 'Chia sẻ kinh nghiệm. Kết nối cơ hội.'})).toBeVisible();
+  await preview.getByRole('button', {name: 'Điện thoại', exact: true}).click();
+  await expect(preview.locator('iframe')).toHaveCSS('width', '390px');
+  await page.screenshot({path: '../artifacts/theme-preview-mobile.png'});
+  await preview.getByRole('button', {name: 'Máy tính', exact: true}).click();
+  await page.screenshot({path: '../artifacts/theme-preview-desktop.png'});
+  await page.keyboard.press('Escape');
+  await expect(preview).toHaveCount(0);
   await page
     .getByRole("article")
     .filter({
