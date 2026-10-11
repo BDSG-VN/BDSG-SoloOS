@@ -1,6 +1,8 @@
 export const messages = {
   vi: {
     overview: "Tổng quan",
+    operations: "Trung tâm vận hành",
+    devices: "Thiết bị & ứng dụng",
     business: "Doanh nghiệp",
     cms: "Nội dung & website",
     chat: "AI Studio",
@@ -15,6 +17,8 @@ export const messages = {
   },
   en: {
     overview: "Overview",
+    operations: "Operations center",
+    devices: "Devices & apps",
     business: "Business",
     cms: "Content & website",
     chat: "AI Studio",

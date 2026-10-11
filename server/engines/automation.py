@@ -73,6 +73,11 @@ async def execute(state, run):
                     step["arguments"],
                     actor="agent",
                     run_id=run["id"],
+                    **(
+                        {"agent_id": run["definition"]["agent_id"]}
+                        if run["definition"].get("agent_id")
+                        else {}
+                    ),
                 )
                 if result["status"] == "requires_confirmation":
                     saved = queue.checkpoint(

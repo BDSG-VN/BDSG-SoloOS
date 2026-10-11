@@ -1,0 +1,28 @@
+name: SoloOS
+options:
+  bundleIdPrefix: vn.bdsg
+  deploymentTarget:
+    iOS: '16.0'
+    macOS: '13.0'
+settings:
+  SWIFT_VERSION: '5.9'
+targets:
+  SoloOS-iOS:
+    type: application
+    platform: iOS
+    sources: [Sources/SoloOS]
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: vn.bdsg.soloos.ios
+      GENERATE_INFOPLIST_FILE: YES
+      INFOPLIST_KEY_UILaunchScreen_Generation: YES
+      INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+      TARGETED_DEVICE_FAMILY: '1,2'
+  SoloOS-macOS:
+    type: application
+    platform: macOS
+    sources: [Sources/SoloOS]
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: vn.bdsg.soloos.macos
+      GENERATE_INFOPLIST_FILE: YES
+      ENABLE_APP_SANDBOX: YES
+      ENABLE_OUTGOING_NETWORK_CONNECTIONS: YES

@@ -5,6 +5,8 @@ import json
 import os
 from pathlib import Path
 
+from server.core.context import chat_history
+
 
 class NativeUnavailable(ValueError):
     pass
@@ -147,12 +149,18 @@ async def stream_chat(body, state):
                 {
                     "project": context,
                     "memory": getattr(state, "notes_brain", state.brain).notes(),
-                    "history": state.brain.messages(body.conversation)[-12:],
+                    "history": chat_history(state, body.conversation),
                     "request": body.message,
                 },
                 ensure_ascii=False,
             )
         )
+        profile = getattr(state, "agent_profile", None)
+        if profile:
+            prompt += (
+                "\nOwner-configured assistant instructions (no tool authority): "
+                + profile["instruction"]
+            )
         state.brain.add(body.conversation, "user", body.message)
         async for chunk in stream_text(prompt, body.model):
             text += chunk

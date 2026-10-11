@@ -1,8 +1,17 @@
 import React, { useEffect, useState } from "react";
+import { useUnsaved } from "./use_unsaved.js";
+import Packs from "./packs.js";
+import Schedules from "./schedules.js";
 const h = React.createElement;
 const templates = {
   skills: { title: "", instruction: "", enabled: true },
-  agents: { title: "", instruction: "", skills: [], enabled: true },
+  agents: {
+    title: "",
+    instruction: "",
+    skills: [],
+    connectors: null,
+    enabled: true,
+  },
   workflows: {
     title: "",
     agent_id: null,
@@ -11,16 +20,27 @@ const templates = {
   },
 };
 const labels = { skills: "Kỹ năng", agents: "Trợ lý", workflows: "Quy trình" };
-export default function Automation({ api, post }) {
+export default function Automation({ api, post, onDirtyChange }) {
   const [data, setData] = useState(null),
     [kind, setKind] = useState("workflows"),
     [draft, setDraft] = useState(templates.workflows),
     [id, setId] = useState(null),
     [error, setError] = useState(""),
     [notice, setNotice] = useState("");
+  const [baseline, setBaseline] = useState(JSON.stringify(templates.workflows));
+  const mayDiscard = useUnsaved(
+    JSON.stringify(draft) !== baseline,
+    onDirtyChange,
+  );
+  const [connectors, setConnectors] = useState([]);
   const [busy, setBusy] = useState(false);
   async function reload() {
-    setData(await api("/automation"));
+    const [automation, connections] = await Promise.all([
+      api("/automation"),
+      api("/mcp/connectors"),
+    ]);
+    setData(automation);
+    setConnectors(connections);
   }
   useEffect(() => {
     reload().catch((e) => setError(e.message));
@@ -40,11 +60,13 @@ export default function Automation({ api, post }) {
       setBusy(false);
     }
   }
-  function edit(next, value = null) {
+  function edit(next, value = null, saved = false) {
+    if (!saved && !mayDiscard()) return;
     setKind(next);
     setId(value?.id || null);
     const { id: _, ...body } = value || templates[next];
     setDraft(body);
+    setBaseline(JSON.stringify(body));
   }
   function update(values) {
     setDraft({ ...draft, ...values });
@@ -55,8 +77,12 @@ export default function Automation({ api, post }) {
     });
   }
   return h(
-    "section",
-    { className: "panel workspace-panel", style: { padding: 24 } },
+    "fieldset",
+    {
+      disabled: busy,
+      className: "panel workspace-panel",
+      style: { padding: 24, minWidth: 0 },
+    },
     h("h2", null, "Tự động hóa"),
     h(
       "p",
@@ -114,6 +140,46 @@ export default function Automation({ api, post }) {
             }),
             s.title,
           ),
+        ),
+      ),
+    kind === "agents" &&
+      h(
+        "fieldset",
+        null,
+        h("legend", null, "Phạm vi công cụ của trợ lý"),
+        h(
+          "label",
+          null,
+          h("input", {
+            type: "checkbox",
+            checked: draft.connectors == null,
+            onChange: (e) =>
+              update({ connectors: e.target.checked ? null : [] }),
+          }),
+          " Dùng các kết nối được chủ cấp quyền",
+        ),
+        draft.connectors != null &&
+          connectors.map((c) =>
+            h(
+              "label",
+              { key: c.id },
+              h("input", {
+                type: "checkbox",
+                checked: draft.connectors.includes(c.id),
+                onChange: (e) =>
+                  update({
+                    connectors: e.target.checked
+                      ? [...draft.connectors, c.id]
+                      : draft.connectors.filter((v) => v !== c.id),
+                  }),
+              }),
+              c.id,
+            ),
+          ),
+        h(
+          "small",
+          null,
+          "Không chọn kết nối nào: chỉ soạn nội dung. Quyền tại MCP Hub vẫn áp dụng.",
         ),
       ),
     kind === "workflows" &&
@@ -247,7 +313,7 @@ export default function Automation({ api, post }) {
               body,
               id ? "PUT" : "POST",
             );
-            edit(kind);
+            edit(kind, null, true);
             setNotice("Đã lưu.");
           }),
       },
@@ -273,56 +339,10 @@ export default function Automation({ api, post }) {
             },
             "Chạy",
           ),
-        kind === "workflows" &&
-          h(
-            "button",
-            {
-              disabled: busy || !item.enabled,
-              onClick: () => {
-                const n = window.prompt(
-                  "Chạy lặp mỗi bao nhiêu phút? Tối thiểu 15 phút. Mỗi lượt có thể dùng hạn mức AI hoặc thực hiện công cụ đã cấp quyền.",
-                  "60",
-                );
-                if (n !== null)
-                  run(() =>
-                    post("/automation/schedules", {
-                      workflow_id: item.id,
-                      interval_minutes: Number(n),
-                      enabled: true,
-                    }),
-                  );
-              },
-            },
-            "Đặt lịch",
-          ),
       ),
     ),
-    h("h3", null, "Lịch lặp"),
-    ...(data?.schedules || []).map((s) =>
-      h(
-        "p",
-        { key: s.id },
-        `${data.workflows.find((w) => w.id === s.workflow_id)?.title || s.workflow_id} · ${s.interval_minutes} phút · ${s.enabled ? "Bật" : "Tạm dừng"}`,
-        h(
-          "button",
-          {
-            onClick: () =>
-              run(() =>
-                post(
-                  `/automation/schedules/${s.id}`,
-                  {
-                    workflow_id: s.workflow_id,
-                    interval_minutes: s.interval_minutes,
-                    enabled: !s.enabled,
-                  },
-                  "PUT",
-                ),
-              ),
-          },
-          s.enabled ? "Tạm dừng" : "Bật lại",
-        ),
-      ),
-    ),
+    h(Packs, { post, onSaved: reload }),
+    h(Schedules, { data, api, post, onSaved: reload }),
     h("h3", null, "Hộp kết quả"),
     ...(data?.runs || []).map((r) =>
       h(

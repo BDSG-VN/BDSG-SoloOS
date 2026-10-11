@@ -10,6 +10,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from server.core.scheduling import Schedule
+
 
 class Strict(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -25,6 +27,7 @@ class Agent(Strict):
     title: str = Field(min_length=1, max_length=200)
     instruction: str = Field(default="", max_length=20000)
     skills: list[str] = Field(default_factory=list, max_length=20)
+    connectors: list[str] | None = Field(default=None, max_length=100)
     enabled: bool = True
 
 
@@ -41,12 +44,6 @@ class Workflow(Strict):
     agent_id: str | None = None
     steps: list[Step] = Field(min_length=1, max_length=12)
     enabled: bool = True
-
-
-class Schedule(Strict):
-    workflow_id: str
-    interval_minutes: int = Field(ge=15, le=525600)
-    enabled: bool = False
 
 
 class Automation:
@@ -102,21 +99,44 @@ class Automation:
             )
         return self.definition(kind, identifier)
 
+    def agent_allows(self, identifier, connector):
+        try:
+            profile = self.agent_profile(identifier)
+            return profile["connectors"] is None or connector in profile["connectors"]
+        except ValueError:
+            return False
+
+    def agent_profile(self, identifier):
+        agent = self.definition("agents", identifier)
+        if not agent["enabled"]:
+            raise ValueError("Trợ lý đã tắt.")
+        instructions = [agent["instruction"]]
+        for skill_id in agent["skills"]:
+            skill = self.definition("skills", skill_id)
+            if skill["enabled"]:
+                instructions.append(skill["instruction"])
+        return {
+            "id": identifier,
+            "title": agent["title"],
+            "instruction": "\n\n".join(instructions),
+            "connectors": agent.get("connectors"),
+        }
+
     def snapshot(self, workflow_id):
         workflow = self.definition("workflows", workflow_id)
         if not workflow["enabled"]:
             raise ValueError("Quy trình đã tắt.")
-        instructions = []
-        if workflow["agent_id"]:
-            agent = self.definition("agents", workflow["agent_id"])
-            if not agent["enabled"]:
-                raise ValueError("Trợ lý đã tắt.")
-            instructions.append(agent["instruction"])
-            for identifier in agent["skills"]:
-                skill = self.definition("skills", identifier)
-                if skill["enabled"]:
-                    instructions.append(skill["instruction"])
-        return {**workflow, "instructions": "\n\n".join(instructions)}
+        profile = self.agent_profile(workflow["agent_id"]) if workflow["agent_id"] else None
+        allowed = profile["connectors"] if profile else None
+        if allowed is not None and any(
+            step["kind"] == "mcp" and step["connector"] not in allowed for step in workflow["steps"]
+        ):
+            raise ValueError("Quy trình dùng kết nối ngoài phạm vi trợ lý.")
+        return {
+            **workflow,
+            "instructions": profile["instruction"] if profile else "",
+            "allowed_connectors": allowed,
+        }
 
     def enqueue(self, workflow_id):
         snapshot = self.snapshot(workflow_id)
@@ -239,18 +259,34 @@ class Automation:
             ]
 
     def schedule(self, body, identifier=None):
-        self.snapshot(body.workflow_id)
+        if body.enabled:
+            self.snapshot(body.workflow_id)
+        else:
+            self.definition("workflows", body.workflow_id)
+        now = time.time()
+        next_run = body.next_after(now)
+        if body.enabled and body.kind == "once" and next_run <= now:
+            raise ValueError("Chọn thời điểm tương lai cho lịch một lần.")
+        if identifier and not any(s["id"] == identifier for s in self.schedules()):
+            raise ValueError("Không tìm thấy lịch.")
         identifier = identifier or uuid.uuid4().hex
         with self.db() as db:
             db.execute(
                 "INSERT OR REPLACE INTO schedules VALUES(?,?,?)",
-                (identifier, body.model_dump_json(), time.time() + body.interval_minutes * 60),
+                (identifier, body.model_dump_json(), next_run),
             )
-        return {"id": identifier}
+        return {"id": identifier, "next_run": next_run}
+
+    def delete_schedule(self, identifier):
+        with self.db() as db:
+            if not db.execute("DELETE FROM schedules WHERE id=?", (identifier,)).rowcount:
+                raise ValueError("Không tìm thấy lịch.")
+        return {"deleted": True}
 
     def tick(self):
+        now = time.time()
         for schedule in self.schedules():
-            if not schedule["enabled"] or schedule["next_run"] > time.time():
+            if not schedule["enabled"] or schedule["next_run"] > now:
                 continue
             try:
                 snapshot = self.snapshot(schedule["workflow_id"])
@@ -261,10 +297,20 @@ class Automation:
                 current = db.execute(
                     "SELECT * FROM schedules WHERE id=?", (schedule["id"],)
                 ).fetchone()
-                if current["next_run"] != schedule["next_run"]:
+                if not current or current["next_run"] != schedule["next_run"]:
                     continue
-                self._enqueue(db, snapshot)
+                body = Schedule.model_validate_json(current["data"])
+                if not body.enabled:
+                    continue
+                overlapping = db.execute(
+                    "SELECT 1 FROM runs WHERE status IN ('queued','running','waiting') AND json_extract(definition,'$.id')=? LIMIT 1",
+                    (body.workflow_id,),
+                ).fetchone()
+                if not body.skip_overlap or not overlapping:
+                    self._enqueue(db, snapshot)
+                if body.kind == "once":
+                    body.enabled = False
                 db.execute(
-                    "UPDATE schedules SET next_run=? WHERE id=?",
-                    (time.time() + schedule["interval_minutes"] * 60, schedule["id"]),
+                    "UPDATE schedules SET data=?,next_run=? WHERE id=?",
+                    (body.model_dump_json(), body.next_after(now), schedule["id"]),
                 )

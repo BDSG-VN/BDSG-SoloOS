@@ -1,6 +1,26 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
+import { useUnsaved } from "./use_unsaved.js";
+import ContextPanel from "./context_panel.js";
 const h = React.createElement;
-export default function Sessions({ api, post, onOpen }) {
+export default function Sessions({ api, post, onOpen, onDirtyChange }) {
+  const [dirtyPanels, setDirtyPanels] = useState({});
+  const dirtyPanel = useCallback(
+    (id, dirty) => setDirtyPanels((previous) => ({ ...previous, [id]: dirty })),
+    [],
+  );
+  const mayDiscard = useUnsaved(
+    Object.values(dirtyPanels).some(Boolean),
+    onDirtyChange,
+  );
+  const generation = useRef(0);
+  useEffect(
+    () => () => {
+      generation.current++;
+    },
+    [],
+  );
+  const [agents, setAgents] = useState([]),
+    [agent, setAgent] = useState("");
   const [shares, setShares] = useState([]),
     [shareURL, setShareURL] = useState("");
   const [brains, setBrains] = useState([]),
@@ -14,18 +34,22 @@ export default function Sessions({ api, post, onOpen }) {
     [project, setProject] = useState(""),
     [error, setError] = useState("");
   async function reload() {
-    const [s, p, b, shared] = await Promise.all([
+    const request = ++generation.current;
+    const [s, p, b, shared, automation] = await Promise.all([
       api(
         `/workspace/sessions?archived=${archived}&search=${encodeURIComponent(search)}`,
       ),
       api("/workspace/projects"),
       api("/library"),
       api("/shares"),
+      api("/automation"),
     ]);
+    if (request !== generation.current) return;
     setSessions(s);
     setProjects(p);
     setBrains(b);
     setShares(shared);
+    setAgents(automation.agents);
   }
   useEffect(() => {
     reload().catch((e) => setError(e.message));
@@ -52,7 +76,12 @@ export default function Sessions({ api, post, onOpen }) {
       "label",
       null,
       "Tìm theo tên hoặc nội dung",
-      h("input", { value: search, onChange: (e) => setSearch(e.target.value) }),
+      h("input", {
+        value: search,
+        onChange: (e) => {
+          if (mayDiscard()) setSearch(e.target.value);
+        },
+      }),
     ),
     h(
       "label",
@@ -60,7 +89,9 @@ export default function Sessions({ api, post, onOpen }) {
       h("input", {
         type: "checkbox",
         checked: archived,
-        onChange: (e) => setArchived(e.target.checked),
+        onChange: (e) => {
+          if (mayDiscard()) setArchived(e.target.checked);
+        },
       }),
       " Đã lưu trữ",
     ),
@@ -88,6 +119,7 @@ export default function Sessions({ api, post, onOpen }) {
               const s = await post("/workspace/sessions", {
                 project_id: project || null,
                 brain_id: brain,
+                agent_id: agent || null,
               });
               onOpen(s);
             }),
@@ -103,6 +135,19 @@ export default function Sessions({ api, post, onOpen }) {
         "select",
         { value: brain, onChange: (e) => setBrain(e.target.value) },
         ...brains.map((b) => h("option", { key: b.id, value: b.id }, b.title)),
+      ),
+    ),
+    h(
+      "label",
+      null,
+      "Trợ lý cho cuộc trò chuyện mới",
+      h(
+        "select",
+        { value: agent, onChange: (e) => setAgent(e.target.value) },
+        h("option", { value: "" }, "Trợ lý mặc định"),
+        ...agents
+          .filter((a) => a.enabled)
+          .map((a) => h("option", { key: a.id, value: a.id }, a.title)),
       ),
     ),
     ...sessions.map((s) =>
@@ -131,9 +176,23 @@ export default function Sessions({ api, post, onOpen }) {
         ),
         h(
           "button",
-          { onClick: () => run(() => update(s, { archived: !s.archived })) },
+          {
+            onClick: () => {
+              if (mayDiscard()) run(() => update(s, { archived: !s.archived }));
+            },
+          },
           s.archived ? "Khôi phục" : "Lưu trữ",
         ),
+        h(ContextPanel, {
+          session: s,
+          onDirtyChange: dirtyPanel,
+          api,
+          post,
+          onSave: async (patch) => {
+            await update(s, patch);
+            await reload();
+          },
+        }),
         h(
           "a",
           { href: `/api/workspace/sessions/${s.id}/export`, download: true },

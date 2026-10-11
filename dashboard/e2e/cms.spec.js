@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures.js";
 import { readFileSync, mkdirSync } from "node:fs";
 const token = readFileSync(new URL("../../.env", import.meta.url), "utf8")
   .split("\n")
@@ -11,6 +11,7 @@ test("CMS preserves public snapshot, restores drafts and creates an AI proposal"
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("dialog", (dialog) => dialog.accept());
   await page.goto("/admin");
+  await page.getByLabel("Dùng khóa máy chủ").check();
   await page.getByLabel("Khóa chủ doanh nghiệp").fill(token);
   await page.getByRole("button", { name: "Mở không gian làm việc" }).click();
   await page
@@ -81,6 +82,7 @@ test("CMS preserves public snapshot, restores drafts and creates an AI proposal"
     }),
   );
   await page.reload();
+  await page.getByRole("button", { name: "Mở menu" }).click();
   await page
     .getByRole("button", { name: "Nội dung & website", exact: true })
     .click();
@@ -116,9 +118,13 @@ test("CMS preserves public snapshot, restores drafts and creates an AI proposal"
   );
   await page.getByLabel("Lệnh cho AI").fill("Viết tin thử nghiệm");
   await page.getByLabel("Tiêu đề", { exact: true }).fill("Bản đang viết");
-  await page.getByRole("button", { name: "Tạo đề xuất bằng AI", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Tạo đề xuất bằng AI", exact: true })
+    .click();
   await expect(page.getByRole("alert")).toContainText("Lưu nội dung");
-  await expect(page.getByLabel("Tiêu đề", { exact: true })).toHaveValue("Bản đang viết");
+  await expect(page.getByLabel("Tiêu đề", { exact: true })).toHaveValue(
+    "Bản đang viết",
+  );
   await page.getByLabel("Tiêu đề", { exact: true }).fill("");
   await page
     .getByRole("button", { name: "Tạo đề xuất bằng AI", exact: true })
@@ -130,9 +136,12 @@ test("CMS preserves public snapshot, restores drafts and creates an AI proposal"
     proposal.title,
   );
   expect((await page.request.get("/news/ai-test")).status()).toBe(404);
+  await page.getByRole("button", { name: "Mở menu" }).click();
   page.removeAllListeners("dialog");
-  page.once("dialog", dialog => dialog.dismiss());
+  page.once("dialog", (dialog) => dialog.dismiss());
   await page.getByRole("button", { name: "Tổng quan", exact: true }).click();
-  await expect(page.getByLabel("Tiêu đề", { exact: true })).toHaveValue(proposal.title);
+  await expect(page.getByLabel("Tiêu đề", { exact: true })).toHaveValue(
+    proposal.title,
+  );
   expect(errors).toEqual([]);
 });

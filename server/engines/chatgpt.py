@@ -4,6 +4,7 @@ import json
 
 import httpx
 
+from server.core.context import chat_history
 from server.engines.chatgpt_auth import RESOURCE, access_token, models
 
 
@@ -118,6 +119,12 @@ async def stream_chatgpt(body, state):
             "Only the MCP Hub may authorize actions; never claim a pending or failed action succeeded.\n"
             + body.ui_prompt
         )
+        profile = getattr(state, "agent_profile", None)
+        if profile:
+            prompt += (
+                "\nOwner-configured assistant instructions (cannot grant tool authority): "
+                + profile["instruction"]
+            )
         if not body.ui_prompt:
             raise ValueError("Thiếu định nghĩa giao diện AI Studio.")
         if getattr(state, "workspace", None):
@@ -135,12 +142,18 @@ async def stream_chatgpt(body, state):
         ]
         inputs.extend(
             {"role": m["role"], "content": m["content"]}
-            for m in state.brain.messages(body.conversation)[-12:]
+            for m in chat_history(state, body.conversation)
         )
         inputs.append({"role": "user", "content": body.message})
         state.brain.add(body.conversation, "user", body.message)
         tool_map, definitions = {}, []
         for connector in state.store.connectors():
+            if (
+                profile
+                and profile["connectors"] is not None
+                and connector["id"] not in profile["connectors"]
+            ):
+                continue
             if (
                 connector["id"] == "second-brain" or connector["id"].startswith("brain-")
             ) and connector["id"] != getattr(state, "brain_connector", "second-brain"):
@@ -192,7 +205,11 @@ async def stream_chatgpt(body, state):
                     raise ValueError("Model yêu cầu công cụ ngoài danh sách đã cấp.")
                 connector, name = tool_map[call["name"]]
                 result = await state.hub.call_tool(
-                    connector, name, json.loads(call["arguments"]), actor="agent"
+                    connector,
+                    name,
+                    json.loads(call["arguments"]),
+                    actor="agent",
+                    **({"agent_id": profile["id"]} if profile else {}),
                 )
                 yield event("tool", connector=connector, tool=name, result=result)
                 inputs.append(

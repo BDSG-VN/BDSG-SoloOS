@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures.js";
 import { readFileSync } from "node:fs";
 const token = readFileSync(new URL("../../.env", import.meta.url), "utf8")
   .split("\n")
@@ -12,6 +12,7 @@ test("isolated brain proposal requires review, revisions remain available, share
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("dialog", (d) => d.accept());
   await page.goto("/admin");
+  await page.getByLabel("Dùng khóa máy chủ").check();
   await page.getByLabel("Khóa chủ doanh nghiệp").fill(token);
   await page.getByRole("button", { name: "Mở không gian làm việc" }).click();
   await page

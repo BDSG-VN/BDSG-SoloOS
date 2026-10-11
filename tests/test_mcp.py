@@ -316,3 +316,35 @@ async def test_cancelled_workflow_cannot_use_approved_confirmation(system):
     with pytest.raises(PolicyError, match="no longer active"):
         await hub.execute_confirmation(result["confirmation_id"], actor="agent")
     assert not session.calls
+
+
+async def test_agent_scope_revoked_while_waiting_cannot_execute(system):
+    store, config, session, hub = system
+    store.put_connector(replace(config, permission=Permission.REQUIRES_CONFIRMATION))
+    hub.agent_guard = lambda agent, connector: True
+    result = await hub.call_tool(
+        "service", "write", {"message": "pending"}, actor="agent", agent_id="writer"
+    )
+    store.decide(result["confirmation_id"], True, "owner")
+    hub.agent_guard = lambda agent, connector: False
+    with pytest.raises(PolicyError, match="Assistant"):
+        await hub.execute_confirmation(result["confirmation_id"], actor="agent")
+    assert not session.calls
+
+
+async def test_agent_scope_revoked_during_discovery_cannot_dispatch(system):
+    store, config, session, hub = system
+    store.put_connector(replace(config, permission=Permission.FULL_ACCESS))
+    hub.agent_guard = lambda agent, connector: True
+    original = session.list_tools
+
+    async def discovery(cursor=None):
+        hub.agent_guard = lambda agent, connector: False
+        return await original(cursor)
+
+    session.list_tools = discovery
+    with pytest.raises(PolicyError, match="Assistant"):
+        await hub.call_tool(
+            "service", "write", {"message": "pending"}, actor="agent", agent_id="writer"
+        )
+    assert not session.calls

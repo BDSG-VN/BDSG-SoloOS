@@ -42,12 +42,17 @@ def render_blocks(blocks, preview=False):
     return "".join(result)
 
 
-def layout(title, content, description="", preview=False):
+def layout(title, content, description="", preview=False, site=None):
+    from server.core.site import THEMES, SiteSettings
+
+    site = site or SiteSettings()
+    theme = THEMES.get(site.theme, THEMES["personal"])
+    theme_style = f":root{{--accent:{theme[2]};--paper:{theme[3]}}}"
     banner = '<div class="preview">Bản xem trước riêng tư · chưa xuất bản</div>' if preview else ""
-    return f'''<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(title)}</title><meta name="description" content="{e(description)}"><style>{STYLE}</style></head><body>{banner}<header><a href="/">Phạm Văn Thư</a><nav><a href="/news">Tin tức</a> · <a href="/admin">Quản trị</a></nav></header><main>{content}</main><footer><span>Phạm Văn Thư</span><span>Vận hành bằng BDSG SoloOS · BDSG Foundation</span></footer></body></html>'''
+    return f'''<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(title)}</title><meta name="description" content="{e(description)}"><style>{STYLE}{theme_style}</style></head><body>{banner}<header><a href="/">{e(site.title)}</a><nav><a href="/news">Tin tức</a> · <a href="/search">Tìm kiếm</a> · <a href="/account">Đăng nhập</a></nav></header><main>{content}</main><footer><span>{e(site.title)}</span><span>Vận hành bằng BDSG SoloOS · BDSG Foundation</span></footer></body></html>'''
 
 
-def document_page(doc, preview=False):
+def document_page(doc, preview=False, site=None):
     meta = " · ".join(e(v) for v in doc.get("categories", []))
     if doc.get("ai_generated"):
         meta += " · Nội dung có hỗ trợ AI"
@@ -72,10 +77,11 @@ def document_page(doc, preview=False):
         body,
         doc.get("seo_description") or doc.get("excerpt", ""),
         preview,
+        site,
     )
 
 
-def news_page(posts, category=""):
+def news_page(posts, category="", site=None):
     categories = sorted({c for p in posts for c in p.get("categories", [])})
     from urllib.parse import quote
 
@@ -90,10 +96,11 @@ def news_page(posts, category=""):
         for p in visible
     )
     return layout(
-        "Tin tức · Phạm Văn Thư",
+        "Tin tức",
         "<h1>Tin tức</h1>"
         + filters
         + '<div class="cards">'
         + (cards or "<p>Chưa có bài viết được xuất bản.</p>")
         + "</div>",
+        site=site,
     )

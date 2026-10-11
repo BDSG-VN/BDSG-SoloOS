@@ -19,11 +19,12 @@ from server.core.ai_accounts import AIAccounts
 from server.core.automation import Automation
 from server.core.business import BusinessStore
 from server.core.cms import CMSStore, ConflictError
+from server.core.devices import Devices
 from server.core.library import Library
 from server.core.mcp_hub import MCPHub
 from server.core.mcp_store import Connector, MCPStore, Permission, PolicyError
 from server.core.shares import Shares
-from server.core.tasks import TaskQueue
+from server.core.tasks import TaskInput, TaskQueue
 from server.core.workspace import Workspace
 from server.engines.provider_specs import PROVIDERS
 
@@ -33,7 +34,15 @@ class StrictModel(BaseModel):
 
 
 class Login(StrictModel):
-    token: str = Field(max_length=512)
+    token: str = Field(default="", max_length=512)
+    username: str = Field(default="", max_length=100)
+    password: str = Field(default="", max_length=128)
+
+
+class Setup(StrictModel):
+    token: str = Field(min_length=32, max_length=512)
+    username: str = Field(min_length=3, max_length=100, pattern=r"^[a-zA-Z0-9_.@-]+$")
+    password: str = Field(min_length=12, max_length=128)
 
 
 class ToolCall(StrictModel):
@@ -69,10 +78,6 @@ class NoteInput(StrictModel):
     content: str = Field(max_length=100000)
 
 
-class TaskInput(StrictModel):
-    title: str = Field(min_length=1, max_length=500)
-
-
 class TaskMove(StrictModel):
     state: str
 
@@ -84,6 +89,7 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
         app.state.settings = config
         app.state.store = MCPStore(config.data_dir / "system/mcp.db", config.store_key)
         app.state.hub = hub_factory(app.state.store)
+        app.state.devices = Devices(config.data_dir / "system/devices.db")
         app.state.library = Library(config.data_dir / "brains")
         app.state.brain = app.state.library.brain("default")
         app.state.workspace = Workspace(
@@ -155,7 +161,9 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
                     },
                 )
         app.state.automation = Automation(config.data_dir / "system/automation.db")
+        app.state.workspace.automation = app.state.automation
         app.state.hub.execution_guard = app.state.automation.active
+        app.state.hub.agent_guard = app.state.automation.agent_allows
         from server.engines.automation import worker
 
         task = asyncio.create_task(worker(app.state))
@@ -168,12 +176,15 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
 
     app = FastAPI(
         title="BDSG Solo-OS",
-        version="0.4.0",
+        version="0.5.0",
         lifespan=lifespan,
         docs_url=None,
         redoc_url=None,
         openapi_url=None,
     )
+    from server.api.members import router as members_router
+
+    app.include_router(members_router)
     # Middleware configuration is read at construction; production must provide env before import.
     config = settings or Settings.from_env()
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(config.hosts))
@@ -189,7 +200,9 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
     async def security(request: Request, call_next):
         if request.url.path.startswith("/api/") and request.method != "OPTIONS":
             client = request.client.host if request.client else "unknown"
-            login_attempt = request.url.path == "/api/session" and request.method == "POST"
+            login_attempt = (
+                request.url.path in {"/api/session", "/api/setup"} and request.method == "POST"
+            )
             bucket = ("login:" if login_attempt else "api:") + client
             if not request.app.state.store.rate_limit(bucket, 10 if login_attempt else 240):
                 return JSONResponse(
@@ -202,10 +215,20 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
         if unsafe:
             if origin and origin not in config.origins:
                 return JSONResponse({"detail": "Untrusted origin"}, status_code=403)
-            if request.url.path == "/api/session" and request.method == "POST" and not origin:
+            if (
+                request.url.path in {"/api/session", "/api/setup"}
+                and request.method == "POST"
+                and not origin
+            ):
                 return JSONResponse({"detail": "Login requires an allowed Origin"}, status_code=403)
-            login_route = request.url.path == "/api/session" and request.method == "POST"
-            if not request.headers.get("authorization") and not login_route:
+            login_route = (
+                request.url.path in {"/api/session", "/api/setup"} and request.method == "POST"
+            )
+            if (
+                not request.headers.get("authorization")
+                and not login_route
+                and not request.url.path.startswith("/api/members/")
+            ):
                 data = session_data(request)
                 csrf = request.headers.get("x-csrf-token", "")
                 if data and not hmac.compare_digest(csrf.encode(), data["csrf"].encode()):
@@ -245,13 +268,37 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
 
     @app.get("/api/health")
     def health():
-        return {"status": "ok", "version": "0.4.0"}
+        return {"status": "ok", "version": "0.5.0"}
+
+    @app.get("/api/setup")
+    def setup_status(request: Request):
+        from server.core.admin_account import configured
+
+        return {"installed": configured(request.app.state.cms)}
+
+    @app.post("/api/setup")
+    def setup(body: Setup, request: Request):
+        from server.core.admin_account import initialize
+
+        if request.headers.get("origin") not in config.origins:
+            raise HTTPException(403, "Untrusted origin")
+        if not hmac.compare_digest(body.token.encode(), config.owner_token.encode()):
+            raise HTTPException(401, "Invalid installation key")
+        initialize(request.app.state.cms, body.username, body.password)
+        return {"installed": True}
 
     @app.post("/api/session")
     def login(body: Login, request: Request, response: Response):
-        if not hmac.compare_digest(
-            body.token.encode(), request.app.state.settings.owner_token.encode()
-        ):
+        from server.core.admin_account import authenticate
+
+        valid = (
+            hmac.compare_digest(
+                body.token.encode(), request.app.state.settings.owner_token.encode()
+            )
+            if body.token
+            else authenticate(request.app.state.cms, body.username, body.password)
+        )
+        if not valid:
             raise HTTPException(401, "Invalid owner token")
         response.set_cookie(
             COOKIE,
@@ -341,7 +388,19 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
 
     @app.post("/api/tasks", dependencies=[Depends(owner)])
     def create_task(body: TaskInput, request: Request):
-        return request.app.state.tasks.create(body.title)
+        validate_task_binding(body, request)
+        return request.app.state.tasks.create(**body.model_dump(mode="json"))
+
+    def validate_task_binding(body, request):
+        if body.project_id:
+            request.app.state.workspace.get("projects", body.project_id)
+        if body.agent_id:
+            request.app.state.automation.agent_profile(body.agent_id)
+
+    @app.put("/api/tasks/{task_id}", dependencies=[Depends(owner)])
+    def update_task(task_id: str, body: TaskInput, request: Request):
+        validate_task_binding(body, request)
+        return request.app.state.tasks.update(task_id, body)
 
     @app.patch("/api/tasks/{task_id}", dependencies=[Depends(owner)])
     def move_task(task_id: str, body: TaskMove, request: Request):
@@ -379,6 +438,11 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
         session = request.app.state.workspace.get("sessions", body.conversation)
         brain_id = session.get("brain_id", "default")
         scoped = SimpleNamespace(**request.app.state._state)
+        scoped.agent_profile = (
+            app.state.automation.agent_profile(session["agent_id"])
+            if session.get("agent_id")
+            else None
+        )
         scoped.notes_brain = request.app.state.library.brain(brain_id)
         scoped.brain_connector = "second-brain" if brain_id == "default" else "brain-" + brain_id
         return StreamingResponse(
@@ -404,10 +468,14 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
     from server.api.automation import router as automation_router
     from server.api.cms import public as cms_public
     from server.api.cms import router as cms_router
+    from server.api.devices import router as devices_router
     from server.api.library import router as library_router
+    from server.api.operations import router as operations_router
     from server.api.shares import router as shares_router
     from server.api.workspace import router as workspace_router
 
+    app.include_router(devices_router)
+    app.include_router(operations_router)
     app.include_router(shares_router)
     app.include_router(library_router)
     app.include_router(automation_router)

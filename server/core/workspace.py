@@ -22,6 +22,9 @@ class SessionInput(BaseModel):
     title: str = Field(default="Cuộc trò chuyện mới", min_length=1, max_length=200)
     project_id: str | None = None
     brain_id: str = "default"
+    agent_id: str | None = None
+    context_summary: str = Field(default="", max_length=12000)
+    context_characters: int = Field(default=48000, ge=4000, le=120000)
     pinned: bool = False
     archived: bool = False
     model: str = Field(default="solo-default", max_length=128)
@@ -29,6 +32,7 @@ class SessionInput(BaseModel):
 
 class Workspace:
     def __init__(self, path: Path, brain, library=None):
+        self.automation = None
         self.path, self.brain, self.library = path, brain, library
         path.parent.mkdir(parents=True, exist_ok=True)
         with self.db() as db:
@@ -95,6 +99,10 @@ class Workspace:
         assert kind in {"sessions", "projects"}
         if identifier:
             self.get(kind, identifier)
+        if kind == "sessions" and body.agent_id:
+            if self.automation is None:
+                raise ValueError("Chưa có kho trợ lý.")
+            self.automation.agent_profile(body.agent_id)
         if kind == "sessions" and self.library:
             self.library.brain(body.brain_id)
         if kind == "sessions" and body.project_id:
@@ -107,9 +115,29 @@ class Workspace:
             )
         return self.get(kind, identifier)
 
+    def chat_context(self, identifier):
+        from server.core.context import bounded_history
+
+        session = self.get("sessions", identifier)
+        history = self.brain.messages(identifier, limit=200)
+        result = bounded_history(history, session.get("context_characters", 48000))
+        return result | {
+            "summary": session.get("context_summary", ""),
+            "limit": session.get("context_characters", 48000),
+            "sampled": len(history),
+        }
+
     def context(self, identifier):
         session = self.get("sessions", identifier)
         if session["archived"]:
             raise ValueError("Khôi phục cuộc trò chuyện trước khi tiếp tục.")
         project = self.get("projects", session["project_id"]) if session["project_id"] else None
-        return json.dumps(project, ensure_ascii=False) if project else ""
+        reference = {
+            "project": project,
+            "owner_reviewed_summary": session.get("context_summary", ""),
+        }
+        return (
+            json.dumps(reference, ensure_ascii=False)
+            if project or reference["owner_reviewed_summary"]
+            else ""
+        )

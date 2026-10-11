@@ -2,6 +2,7 @@
 
 import argparse
 import secrets
+import re
 import shutil
 from pathlib import Path
 
@@ -10,19 +11,26 @@ from cryptography.fernet import Fernet
 parser = argparse.ArgumentParser()
 parser.add_argument("--production", action="store_true")
 parser.add_argument("--output", default=".env")
+parser.add_argument("--domain", help="Public hostname for a production installation")
 args = parser.parse_args()
 path = Path(args.output)
 if path.exists():
     raise SystemExit(f"{path} exists; preserve it or select --output")
+if args.domain and not re.fullmatch(
+    r"(?=.{1,253}$)[a-zA-Z0-9](?:[a-zA-Z0-9.-]*[a-zA-Z0-9])?", args.domain
+):
+    raise SystemExit("Invalid hostname")
+if args.domain:
+    args.production = True
+domain = args.domain or "phamvanthu.com"
 origin = (
-    "https://phamvanthu.com"
+    f"https://{domain}"
     if args.production
     else "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000"
 )
-hosts = (
-    "phamvanthu.com,localhost,127.0.0.1" if args.production else "localhost,127.0.0.1,testserver"
-)
+hosts = f"{domain},localhost,127.0.0.1" if args.production else "localhost,127.0.0.1,testserver"
 content = (
+    f"BDSG_DOMAIN={domain}\n"
     f"BDSG_OWNER_TOKEN={secrets.token_urlsafe(40)}\n"
     f"BDSG_AGENT_TOKEN={secrets.token_urlsafe(40)}\n"
     f"BDSG_STORE_KEY={Fernet.generate_key().decode()}\n"

@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures.js";
 import { readFileSync, mkdirSync } from "node:fs";
 
 const config = readFileSync(new URL("../../.env", import.meta.url), "utf8");
@@ -11,7 +11,8 @@ test("owner signs in, sees streaming UI, submits a form and approves a real MCP 
 }) => {
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("/");
+  await page.goto("/admin");
+  await page.getByLabel("Dùng khóa máy chủ").check();
   await page.getByLabel("Khóa chủ doanh nghiệp").fill(token);
   await page.getByRole("button", { name: "Mở không gian làm việc" }).click();
   await expect(
@@ -93,6 +94,7 @@ test("owner signs in, sees streaming UI, submits a form and approves a real MCP 
   await expect(page.getByText("Đơn đã thu", { exact: true })).toBeVisible();
   await page.screenshot({ path: "../artifacts/business.png", fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Mở menu", exact: true }).click();
   await page.getByRole("button", { name: "Tổng quan", exact: true }).click();
   await page.screenshot({ path: "../artifacts/mobile.png", fullPage: true });
   expect(

@@ -1,7 +1,7 @@
-phamvanthu.com {
+{$BDSG_DOMAIN:phamvanthu.com} {
     encode zstd gzip
     request_body {
-        max_size 1MB
+        max_size 6MB
     }
     reverse_proxy soloos:8000 {
         flush_interval -1

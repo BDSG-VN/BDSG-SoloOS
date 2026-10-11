@@ -68,6 +68,7 @@ class MCPHub:
         self.store = store
         self._session_factory = session_factory
         self.execution_guard = lambda run_id: False
+        self.agent_guard = lambda agent_id, connector_id: False
 
     def _policy(self, connector_id: str, tool: str) -> Connector:
         config = self.store.connector(connector_id)
@@ -117,6 +118,7 @@ class MCPHub:
         *,
         actor: str,
         run_id: str | None = None,
+        agent_id: str | None = None,
     ) -> dict:
         # Freeze a JSON copy so concurrent caller mutation cannot alter what was approved.
         import json
@@ -124,7 +126,9 @@ class MCPHub:
         arguments = json.loads(canonical(arguments))
         try:
             config = self._policy(connector_id, tool)
-            return await self._dispatch(config, tool, arguments, actor, run_id=run_id)
+            return await self._dispatch(
+                config, tool, arguments, actor, run_id=run_id, agent_id=agent_id
+            )
         except PolicyError:
             self.store.audit("denied", connector_id, tool, actor)
             raise
@@ -141,9 +145,14 @@ class MCPHub:
             actor,
             approved=payload,
             run_id=payload.get("run_id"),
+            agent_id=payload.get("agent_id"),
         )
 
-    async def _dispatch(self, config, tool_name, arguments, actor, approved=None, run_id=None):
+    async def _dispatch(
+        self, config, tool_name, arguments, actor, approved=None, run_id=None, agent_id=None
+    ):
+        if agent_id and not self.agent_guard(agent_id, config.id):
+            raise PolicyError("Assistant no longer has access to this connector")
         async with asyncio.timeout(45):
             async with self._session_factory(config, self.store.credentials(config.id)) as session:
                 tools = await self._tools(session)
@@ -162,6 +171,8 @@ class MCPHub:
                     raise PolicyError("Connector changed during invocation")
                 if approved and approved["schema_hash"] != schema_hash:
                     raise PolicyError("Tool definition changed; request a new confirmation")
+                if agent_id and not self.agent_guard(agent_id, config.id):
+                    raise PolicyError("Assistant access changed during invocation")
                 if run_id and not self.execution_guard(run_id):
                     raise PolicyError("Workflow is no longer active")
                 if current.permission == Permission.REQUIRES_CONFIRMATION and approved is None:
@@ -174,6 +185,7 @@ class MCPHub:
                             "schema_hash": schema_hash,
                             "actor": actor,
                             **({"run_id": run_id} if run_id else {}),
+                            **({"agent_id": agent_id} if agent_id else {}),
                         }
                     )
                     self.store.audit("confirmation_requested", config.id, tool_name, actor)

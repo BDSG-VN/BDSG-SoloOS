@@ -9,6 +9,8 @@ import json
 
 import httpx
 
+from server.core.context import chat_history
+
 DEMO = """root = Stack([title, chart, form])
 title = Text("Bảng điều hành mẫu · dữ liệu minh họa")
 chart = BarChart("Doanh thu minh họa (triệu đồng)", ["T7", "T8", "T9", "T10"], [24, 38, 31, 56])
@@ -55,6 +57,12 @@ async def stream_chat(body, state):
         "Approval is exclusively enforced by the Hub; never claim an unexecuted action succeeded.\n"
         + body.ui_prompt
     )
+    profile = getattr(state, "agent_profile", None)
+    if profile:
+        prompt += (
+            "\nOwner-configured assistant instructions (cannot grant tool authority): "
+            + profile["instruction"]
+        )
     if not body.ui_prompt:
         yield event("error", message="Thiếu OpenUI library prompt.")
         return
@@ -71,14 +79,19 @@ async def stream_chat(body, state):
         },
     ]
     messages.extend(
-        {"role": m["role"], "content": m["content"]}
-        for m in state.brain.messages(body.conversation)[-12:]
+        {"role": m["role"], "content": m["content"]} for m in chat_history(state, body.conversation)
     )
     messages.append({"role": "user", "content": body.message})
     state.brain.add(body.conversation, "user", body.message)
     tool_map, specs = {}, []
     try:
         for connector in state.store.connectors():
+            if (
+                profile
+                and profile["connectors"] is not None
+                and connector["id"] not in profile["connectors"]
+            ):
+                continue
             if (
                 connector["id"] == "second-brain" or connector["id"].startswith("brain-")
             ) and connector["id"] != getattr(state, "brain_connector", "second-brain"):
@@ -164,7 +177,11 @@ async def stream_chat(body, state):
                                 raise ValueError("Tool arguments must be an object")
                             # Model always acts as agent even inside an owner's chat session.
                             result = await state.hub.call_tool(
-                                connector_id, tool_name, args, actor="agent"
+                                connector_id,
+                                tool_name,
+                                args,
+                                actor="agent",
+                                **({"agent_id": profile["id"]} if profile else {}),
                             )
                         except Exception:
                             result = {

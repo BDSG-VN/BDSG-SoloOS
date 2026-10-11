@@ -1,0 +1,38 @@
+name: Native applications
+on:
+  push:
+    paths: ['native/**', '.github/workflows/native.yml']
+  pull_request:
+    paths: ['native/**', '.github/workflows/native.yml']
+  workflow_dispatch:
+jobs:
+  apple:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift test --package-path native/apple
+      - run: brew install xcodegen
+      - run: xcodegen generate
+        working-directory: native/apple
+      - run: xcodebuild -project SoloOS.xcodeproj -scheme SoloOS-iOS -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build
+        working-directory: native/apple
+      - run: xcodebuild -project SoloOS.xcodeproj -scheme SoloOS-macOS -configuration Debug CODE_SIGNING_ALLOWED=NO build
+        working-directory: native/apple
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - run: gradle :app:assembleDebug :app:lintDebug
+        working-directory: native/android
+      - uses: actions/upload-artifact@v4
+        with:
+          name: soloos-android-debug
+          path: native/android/app/build/outputs/apk/debug/*.apk

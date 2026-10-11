@@ -12,7 +12,14 @@ import {
   Plus,
   ArrowUp,
   Terminal,
+  Menu,
+  X,
+  Activity,
 } from "lucide-react";
+import Devices from "./components/devices.js";
+import Workboard from "./components/workboard.js";
+import Navigation from "./components/navigation.js";
+import Operations from "./components/operations.js";
 import OpenUIRender, { soloUIPrompt } from "./components/openui_render.js";
 import SharedChat from "./components/shared_chat.js";
 import Voice from "./components/voice.js";
@@ -47,6 +54,8 @@ const post = (path, data, method = "POST") =>
   api(path, { method, body: JSON.stringify(data) });
 const ICONS = {
   overview: LayoutDashboard,
+  operations: Activity,
+  devices: Plug,
   business: LayoutDashboard,
   cms: BookOpen,
   chat: Bot,
@@ -66,6 +75,15 @@ const PERMISSIONS = {
 };
 
 function Login({ onLogin }) {
+  const [installed, setInstalled] = useState(null),
+    [username, setUsername] = useState(""),
+    [password, setPassword] = useState(""),
+    [recovery, setRecovery] = useState(false);
+  useEffect(() => {
+    api("/setup")
+      .then((s) => setInstalled(s.installed))
+      .catch((e) => setError(e.message));
+  }, []);
   const [token, setToken] = useState(""),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
@@ -94,7 +112,7 @@ function Login({ onLogin }) {
         "div",
         { className: "login-foot" },
         "BDSG SoloOS",
-        h("span", null, "MIT LICENSE · v0.1"),
+        h("span", null, "MIT LICENSE · v0.5"),
       ),
     ),
     h(
@@ -106,7 +124,13 @@ function Login({ onLogin }) {
           setBusy(true);
           setError("");
           try {
-            await post("/session", { token });
+            if (installed === false && !recovery)
+              await post("/setup", { token, username, password });
+            await post(
+              "/session",
+              recovery ? { token } : { username, password },
+            );
+            setPassword("");
             setToken("");
             await onLogin();
           } catch (err) {
@@ -117,29 +141,73 @@ function Login({ onLogin }) {
         },
       },
       h("span", { className: "brand-mark" }, "S"),
-      h("h2", null, "Chào mừng về nhà"),
+      h(
+        "h2",
+        null,
+        installed === false ? "Cài đặt quản trị viên" : "Đăng nhập quản trị",
+      ),
       h(
         "p",
         { className: "muted" },
         "Đăng nhập vào hệ điều hành riêng của bạn.",
       ),
+      !recovery &&
+        h(
+          "label",
+          null,
+          "Tên quản trị viên",
+          h("input", {
+            value: username,
+            onChange: (e) => setUsername(e.target.value),
+            required: true,
+            autoComplete: "username",
+            minLength: 3,
+            maxLength: 100,
+          }),
+        ),
+      !recovery &&
+        h(
+          "label",
+          null,
+          "Mật khẩu quản trị",
+          h("input", {
+            type: "password",
+            value: password,
+            onChange: (e) => setPassword(e.target.value),
+            required: true,
+            minLength: 12,
+            maxLength: 128,
+            autoComplete: installed ? "current-password" : "new-password",
+          }),
+        ),
+      (installed === false || recovery) &&
+        h(
+          "label",
+          null,
+          "Khóa chủ doanh nghiệp",
+          h("input", {
+            type: "password",
+            autoComplete: "current-password",
+            value: token,
+            onChange: (e) => setToken(e.target.value),
+            required: true,
+            placeholder: "Nhập BDSG_OWNER_TOKEN",
+          }),
+        ),
       h(
         "label",
         null,
-        "Khóa chủ doanh nghiệp",
         h("input", {
-          type: "password",
-          autoComplete: "current-password",
-          value: token,
-          onChange: (e) => setToken(e.target.value),
-          required: true,
-          placeholder: "Nhập BDSG_OWNER_TOKEN",
+          type: "checkbox",
+          checked: recovery,
+          onChange: (e) => setRecovery(e.target.checked),
         }),
+        " Dùng khóa máy chủ",
       ),
       error && h("p", { className: "error", role: "alert" }, error),
       h(
         "button",
-        { className: "primary", disabled: busy },
+        { className: "primary", disabled: busy || installed === null },
         busy ? "Đang kết nối…" : "Mở không gian làm việc",
         h(ArrowUpRight, { size: 18 }),
       ),
@@ -159,14 +227,27 @@ function App() {
       accountLanding ? "accounts" : "overview",
     ),
     [lang, setLang] = useState("vi");
+  const [navOpen, setNavOpen] = useState(false);
+  const revealNav = useCallback(() => setNavOpen(true), []);
+  useEffect(() => {
+    const close = (e) => {
+      if (e.key === "Escape") setNavOpen(false);
+    };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, []);
   const [cmsDirty, setCMSDirty] = useState(false);
   const setPage = (next) => {
     if (
       next === page ||
       !cmsDirty ||
       window.confirm("Bản nội dung chưa lưu. Rời khu biên tập?")
-    )
+    ) {
       setPageValue(next);
+      setNavOpen(false);
+      return true;
+    }
+    return false;
   };
   const [notes, setNotes] = useState([]),
     [tasks, setTasks] = useState([]),
@@ -183,8 +264,7 @@ function App() {
     [chatBusy, setChatBusy] = useState(false);
   const [notePath, setNotePath] = useState("memory/FACTS.md"),
     [noteContent, setNoteContent] = useState("");
-  const [taskTitle, setTaskTitle] = useState(""),
-    [saving, setSaving] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [connectorDraft, setConnectorDraft] = useState(
     JSON.stringify(
       {
@@ -423,17 +503,21 @@ function App() {
 
   if (page === "library")
     content = h(Library, { api, post, onDirtyChange: setCMSDirty });
-  if (page === "automation") content = h(Automation, { api, post });
+  if (page === "devices") content = h(Devices, { api, post });
+  if (page === "operations")
+    content = h(Operations, { api, post, onNavigate: setPage });
+  if (page === "automation")
+    content = h(Automation, { api, post, onDirtyChange: setCMSDirty });
   if (page === "sessions")
     content = h(Sessions, {
       api,
       post,
+      onDirtyChange: setCMSDirty,
       onOpen: (s) => {
-        if (chatBusy) return;
+        if (chatBusy || !setPage("chat")) return;
         setConversation(s.id);
         setModel(s.model);
         setStream(null);
-        setPage("chat");
       },
     });
   if (page === "accounts")
@@ -727,90 +811,12 @@ function App() {
     );
 
   if (page === "tasks")
-    content = h(
-      "div",
-      null,
-      h(
-        "form",
-        {
-          className: "inline-form panel",
-          onSubmit: (e) => {
-            e.preventDefault();
-            act(async () => {
-              await post("/tasks", { title: taskTitle });
-              setTaskTitle("");
-            });
-          },
-        },
-        h("input", {
-          value: taskTitle,
-          onChange: (e) => setTaskTitle(e.target.value),
-          placeholder: "Việc tiếp theo cần hoàn thành…",
-          required: true,
-          "aria-label": "Tên công việc",
-        }),
-        h(
-          "button",
-          { className: "primary", disabled: saving },
-          h(Plus, { size: 17 }),
-          "Thêm việc",
-        ),
-      ),
-      h(
-        "div",
-        { className: "kanban" },
-        ...["todo", "doing", "done"].map((state) =>
-          h(
-            "section",
-            { className: "kanban-col", key: state },
-            h(
-              "h3",
-              null,
-              { todo: "Cần làm", doing: "Đang làm", done: "Hoàn tất" }[state],
-              h("span", null, tasks.filter((t) => t.state === state).length),
-            ),
-            ...tasks
-              .filter((t) => t.state === state)
-              .map((task) =>
-                h(
-                  "article",
-                  { className: "task-card", key: task.id },
-                  h("p", null, task.title),
-                  h(
-                    "select",
-                    {
-                      value: state,
-                      "aria-label": `Trạng thái ${task.title}`,
-                      disabled: saving,
-                      onChange: (e) =>
-                        act(() =>
-                          post(
-                            `/tasks/${task.id}`,
-                            { state: e.target.value },
-                            "PATCH",
-                          ),
-                        ),
-                    },
-                    ...["todo", "doing", "done"].map((s) =>
-                      h(
-                        "option",
-                        { value: s, key: s },
-                        {
-                          todo: "Cần làm",
-                          doing: "Đang làm",
-                          done: "Hoàn tất",
-                        }[s],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            !tasks.some((t) => t.state === state) &&
-              h("p", { className: "muted empty" }, "Chưa có công việc"),
-          ),
-        ),
-      ),
-    );
+    content = h(Workboard, {
+      api,
+      post,
+      onDirtyChange: setCMSDirty,
+      onSaved: refresh,
+    });
 
   if (page === "mcp")
     content = h(
@@ -987,7 +993,10 @@ function App() {
     { className: "app-shell" },
     h(
       "aside",
-      { className: "sidebar" },
+      {
+        className: `sidebar ${navOpen ? "is-open" : ""}`,
+        id: "workspace-navigation",
+      },
       h(
         "a",
         {
@@ -1001,28 +1010,25 @@ function App() {
         h("span", { className: "brand-mark" }, "S"),
         h("div", null, "SoloOS", h("small", null, "BDSG FOUNDATION")),
       ),
-      h("div", { className: "workspace-label" }, "KHÔNG GIAN CỦA BẠN"),
       h(
-        "nav",
-        null,
-        ...Object.keys(labels).map((id) =>
-          h(
-            "button",
-            {
-              key: id,
-              "aria-label": labels[id],
-              className: page === id ? "active" : "",
-              disabled: chatBusy,
-              onClick: () => setPage(id),
-            },
-            h(ICONS[id], { size: 19 }),
-            h("span", null, labels[id]),
-            id === "approvals" &&
-              approvals.length > 0 &&
-              h("b", null, approvals.length),
-          ),
-        ),
+        "button",
+        {
+          className: "nav-close",
+          onClick: () => setNavOpen(false),
+          "aria-label": "Đóng menu",
+        },
+        h(X, { size: 20 }),
       ),
+      h(Navigation, {
+        labels,
+        icons: ICONS,
+        page,
+        onNavigate: setPage,
+        disabled: chatBusy,
+        approvals: approvals.length,
+        lang,
+        onReveal: revealNav,
+      }),
       h(
         "div",
         { className: "sidebar-bottom" },
@@ -1063,12 +1069,29 @@ function App() {
         ),
       ),
     ),
+    navOpen &&
+      h("button", {
+        className: "nav-backdrop",
+        "aria-label": "Đóng điều hướng",
+        onClick: () => setNavOpen(false),
+      }),
     h(
       "main",
       { className: "main" },
       h(
         "header",
         { className: "topbar" },
+        h(
+          "button",
+          {
+            className: "nav-toggle",
+            "aria-label": "Mở menu",
+            "aria-expanded": navOpen,
+            "aria-controls": "workspace-navigation",
+            onClick: () => setNavOpen(!navOpen),
+          },
+          h(Menu, { size: 20 }),
+        ),
         h(
           "div",
           null,
@@ -1119,7 +1142,7 @@ function App() {
       h(
         "footer",
         null,
-        "BDSG Foundation · MIT · v0.4",
+        "BDSG Foundation · MIT · v0.5",
         h("span", null, "RENT THE MODEL. OWN THE BRAIN."),
       ),
     ),

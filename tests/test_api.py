@@ -202,3 +202,66 @@ def test_library_scoped_sessions_and_public_snapshot_revocation(client):
     assert client.get("/api/shares").status_code == 401
     assert client.delete("/api/shares/" + share["id"], headers=headers).status_code == 200
     assert client.get("/api/shared/" + token).status_code == 404
+
+
+def test_operations_notifications_and_calendar_are_owner_only(client):
+    assert client.get("/api/operations").status_code == 401
+    csrf = login(client)
+    headers = {"X-CSRF-Token": csrf}
+    store = client.app.state.automation
+    from server.core.automation import Step, Workflow
+
+    flow = store.save(
+        "workflows", Workflow(title="Notice", steps=[Step(kind="note", prompt="Private body")])
+    )
+    run = store.enqueue(flow["id"])
+    store.claim()
+    store.checkpoint(run["id"], 1, [], status="completed")
+    data = client.get("/api/operations").json()
+    note = next(n for n in data["notifications"] if n["title"] == "Notice")
+    assert not note["read"] and "Private body" not in str(data)
+    assert (
+        client.post("/api/operations/read", json={"ids": [note["id"]]}, headers=headers).status_code
+        == 200
+    )
+    assert next(
+        n for n in client.get("/api/operations").json()["notifications"] if n["id"] == note["id"]
+    )["read"]
+    result = client.post(
+        "/api/automation/schedules/preview",
+        json={"workflow_id": flow["id"], "kind": "cron", "cron": "0 9 * * 1-5"},
+        headers=headers,
+    )
+    assert result.status_code == 200 and len(result.json()["times"]) == 5
+    assert store.schedules() == []
+
+
+def test_session_agent_and_summary_do_not_delete_history(client):
+    csrf = login(client)
+    headers = {"X-CSRF-Token": csrf}
+    agent = client.post(
+        "/api/automation/agents",
+        json={"title": "Writer", "instruction": "Draft clearly", "connectors": []},
+        headers=headers,
+    ).json()
+    session = client.post(
+        "/api/workspace/sessions",
+        json={
+            "agent_id": agent["id"],
+            "context_summary": "Verified summary",
+            "context_characters": 4000,
+        },
+        headers=headers,
+    ).json()
+    client.app.state.brain.add(session["id"], "user", "Original text")
+    assert (
+        client.get("/api/workspace/sessions/" + session["id"] + "/context").json()["summary"]
+        == "Verified summary"
+    )
+    assert client.get("/api/conversations/" + session["id"]).json()[0]["content"] == "Original text"
+    assert (
+        client.post(
+            "/api/workspace/sessions", json={"agent_id": "missing"}, headers=headers
+        ).status_code
+        == 422
+    )

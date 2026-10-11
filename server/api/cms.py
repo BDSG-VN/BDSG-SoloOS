@@ -15,7 +15,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from server.api.security import owner
 from server.config import ROOT
 from server.core.cms import ContentInput
-from server.core.cms_render import document_page, news_page
+from server.core.cms_render import document_page, e, layout, news_page
+from server.core.site import THEMES, SiteSettings, save_settings, template
+from server.core.site import settings as site_settings
 
 router = APIRouter(prefix="/api/cms", dependencies=[Depends(owner)])
 public = APIRouter()
@@ -96,7 +98,11 @@ def restore_revision(content_id: str, body: Revision, request: Request):
 @router.get("/content/{content_id}/preview")
 def preview(content_id: str, request: Request):
     return HTMLResponse(
-        document_page(request.app.state.cms.get(content_id), preview=True),
+        document_page(
+            request.app.state.cms.get(content_id),
+            preview=True,
+            site=site_settings(request.app.state.cms),
+        ),
         headers={"X-Robots-Tag": "noindex, nofollow", "Cache-Control": "no-store"},
     )
 
@@ -242,7 +248,9 @@ def published_media(filename: str, request: Request):
 
 @public.get("/news", response_class=HTMLResponse)
 def news(request: Request, category: str = ""):
-    return news_page(request.app.state.cms.public("post"), category)
+    return news_page(
+        request.app.state.cms.public("post"), category, site_settings(request.app.state.cms)
+    )
 
 
 @public.get("/news/{slug}", response_class=HTMLResponse)
@@ -250,7 +258,7 @@ def post_page(slug: str, request: Request):
     docs = request.app.state.cms.public("post", slug)
     if not docs:
         raise HTTPException(404)
-    return document_page(docs[0])
+    return document_page(docs[0], site=site_settings(request.app.state.cms))
 
 
 @public.get("/pages/{slug}", response_class=HTMLResponse)
@@ -258,7 +266,7 @@ def page(slug: str, request: Request):
     docs = request.app.state.cms.public("page", slug)
     if not docs:
         raise HTTPException(404)
-    return document_page(docs[0])
+    return document_page(docs[0], site=site_settings(request.app.state.cms))
 
 
 def dashboard():
@@ -279,4 +287,126 @@ def admin():
 @public.get("/", response_class=HTMLResponse)
 def home(request: Request):
     doc = request.app.state.cms.homepage()
-    return document_page(doc) if doc else dashboard()
+    site = site_settings(request.app.state.cms)
+    return (
+        document_page(doc, site=site)
+        if doc
+        else layout(
+            site.title,
+            f'<section class="hero"><h1>{e(site.title)}</h1><p>{e(site.tagline)}</p><a class="button" href="/news">Khám phá bài viết</a></section>',
+            site=site,
+        )
+    )
+
+
+@router.get("/site")
+def get_site(request: Request):
+    return site_settings(request.app.state.cms)
+
+
+@router.put("/site")
+def put_site(body: SiteSettings, request: Request):
+    return save_settings(request.app.state.cms, body)
+
+
+@router.get("/themes")
+def themes():
+    return [
+        {"id": key, "title": item[0], "headline": item[1], "accent": item[2], "paper": item[3]}
+        for key, item in THEMES.items()
+    ]
+
+
+@router.post("/themes/{theme}/draft")
+def theme_draft(theme: str, request: Request):
+    import uuid
+
+    site = site_settings(request.app.state.cms)
+    data = template(theme, site.title)
+    data["slug"] = "home-" + uuid.uuid4().hex[:12]
+    return request.app.state.cms.save(ContentInput(**data).model_dump())
+
+
+@public.get("/search", response_class=HTMLResponse)
+def search_public(request: Request, q: str = ""):
+    query = q.strip()[:200]
+    docs = request.app.state.cms.public()
+    found = [
+        doc
+        for doc in docs
+        if query
+        and query.casefold()
+        in (
+            doc["title"]
+            + " "
+            + doc.get("excerpt", "")
+            + " "
+            + " ".join(block.get("text", "") for block in doc["blocks"])
+        ).casefold()
+    ][:100]
+    cards = "".join(
+        f'<article class="card"><h2><a href="/{"news" if doc["kind"] == "post" else "pages"}/{e(doc["slug"])}">{e(doc["title"])}</a></h2><p>{e(doc.get("excerpt", ""))}</p></article>'
+        for doc in found
+    )
+    form = f'<h1>Tìm kiếm</h1><form method="get"><label>Từ khóa <input name="q" maxlength="200" value="{e(query)}"></label><button>Tìm kiếm</button></form>'
+    return layout(
+        "Tìm kiếm",
+        form + '<div class="cards">' + (cards or "<p>Chưa có kết quả phù hợp.</p>") + "</div>",
+        site=site_settings(request.app.state.cms),
+    )
+
+
+@public.get("/sitemap.xml")
+def sitemap(request: Request):
+    from xml.etree.ElementTree import Element, SubElement, tostring
+
+    from fastapi.responses import Response
+
+    root = Element("urlset", xmlns="http://www.sitemaps.org/schemas/sitemap/0.9")
+    origin = request.app.state.settings.origins[0]
+    paths = ["/", "/news"] + [
+        f"/{'news' if d['kind'] == 'post' else 'pages'}/{d['slug']}"
+        for d in request.app.state.cms.public()
+    ]
+    for path in paths:
+        SubElement(SubElement(root, "url"), "loc").text = origin + path
+    return Response(
+        tostring(root, encoding="utf-8", xml_declaration=True), media_type="application/xml"
+    )
+
+
+@public.get("/feed.xml")
+def feed(request: Request):
+    from xml.etree.ElementTree import Element, SubElement, tostring
+
+    from fastapi.responses import Response
+
+    root = Element("rss", version="2.0")
+    channel = SubElement(root, "channel")
+    origin = request.app.state.settings.origins[0]
+    site = site_settings(request.app.state.cms)
+    for key, value in [("title", site.title), ("link", origin), ("description", site.tagline)]:
+        SubElement(channel, key).text = value
+    for doc in request.app.state.cms.public("post")[:50]:
+        item = SubElement(channel, "item")
+        for key, value in [
+            ("title", doc["title"]),
+            ("link", origin + "/news/" + doc["slug"]),
+            ("guid", origin + "/news/" + doc["slug"]),
+            ("description", doc.get("excerpt", "")),
+        ]:
+            SubElement(item, key).text = value
+    return Response(
+        tostring(root, encoding="utf-8", xml_declaration=True), media_type="application/rss+xml"
+    )
+
+
+@public.get("/robots.txt")
+def robots(request: Request):
+    from fastapi.responses import PlainTextResponse
+
+    return PlainTextResponse(
+        "User-agent: *\nDisallow: /admin\nDisallow: /api/\nDisallow: /account\nSitemap: "
+        + request.app.state.settings.origins[0]
+        + "/sitemap.xml\n"
+    )

@@ -1199,3 +1199,34 @@ pre {
 .voice-controls small { width: 100%; line-height: 1.5; color: #aab5c5; }
 .sidebar nav { min-height: 0; overflow-y: auto; flex-shrink: 1; }
 .sidebar .brand, .sidebar-bottom { flex-shrink: 0; }
+/* Task-oriented navigation and operational overview. */
+.sidebar {padding-top:24px;padding-bottom:18px}
+.sidebar nav {margin-top:24px;gap:14px;scrollbar-width:thin}
+.nav-group {display:flex;flex-direction:column;gap:3px}
+.nav-group h2 {font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#8e9ab0;padding:0 14px;margin:5px 0}
+.sidebar .nav-group button {width:100%;padding:10px 13px;min-height:40px}
+.nav-search {display:block;padding:0 4px}
+.nav-search span {font-size:11px;color:#a5afc1;display:block;margin-bottom:6px}
+.nav-search input {width:100%;min-width:0;font-size:12px;padding:10px}
+.nav-toggle,.nav-close,.nav-backdrop {display:none}
+.operations {display:grid;gap:22px}
+.ops-cards {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+button.ops-card {display:flex;flex-direction:column;align-items:flex-start;gap:10px;text-align:left;white-space:normal;padding:24px}
+.ops-card strong {font-size:17px;line-height:1.5}
+.ops-counts {display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:18px;margin-top:24px}
+.ops-counts div {display:flex;flex-direction:column;gap:6px}.ops-counts strong {font-size:28px}.ops-counts span {font-size:12px;color:var(--muted)}
+.notification-row {display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px 0;border-bottom:1px solid var(--line)}
+.attention {color:#f1c47a}
+@media(max-width:700px){
+ .app-shell{display:block}.main{width:100%;margin:0}
+ .sidebar{position:fixed;width:min(300px,88vw);height:100dvh;padding:24px 18px;transform:translateX(-105%);visibility:hidden;z-index:30;transition:transform .18s ease,visibility .18s}
+ .sidebar.is-open{transform:translateX(0);visibility:visible}
+ .sidebar .brand{justify-content:flex-start;padding:0 8px}.sidebar .brand>div,.sidebar nav button>span,.sidebar .profile>span:not(.avatar),.sidebar .profile>svg{display:block}
+ .sidebar nav{margin-top:24px}.sidebar nav button{justify-content:flex-start}.sidebar nav b{position:static;margin-left:auto;padding:2px 6px}
+ .sidebar .profile{justify-content:flex-start}.nav-toggle,.nav-close{display:inline-flex;padding:8px}.nav-close{position:absolute;right:12px;top:23px}
+ .nav-backdrop{display:block;position:fixed;inset:0;z-index:25;background:#0009;border:0;border-radius:0;padding:0}
+ .topbar{gap:10px}.topbar>div:first-of-type{flex:1}.topbar-right{font-size:0}.topbar-right button{font-size:12px}
+ .ops-cards{grid-template-columns:1fr}.notification-row{align-items:flex-start;flex-direction:column}.operations>.section-title{flex-wrap:wrap}
+}
+.workboard {display:grid;gap:22px}.workboard fieldset{border:0;padding:0;margin:0;min-width:0}.form-grid,.board-filters {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.workboard label{display:flex;flex-direction:column;gap:8px}.workboard input,.workboard select,.workboard textarea{width:100%}.task-card{display:grid;gap:12px;overflow-wrap:anywhere}.task-card p{margin:0}.schedule-editor{border-top:1px solid var(--line);margin-top:24px;padding-top:20px}.schedule-row{border-bottom:1px solid var(--line);padding:18px 0}.packs,.context-panel{margin:18px 0;border:1px solid var(--line);padding:16px;border-radius:12px}.context-panel{width:100%}.context-panel summary,.packs summary{cursor:pointer;color:var(--accent)}
+@media(max-width:700px){.form-grid,.board-filters{grid-template-columns:1fr}.workboard .kanban{grid-template-columns:1fr}.workboard .panel{padding:18px}}

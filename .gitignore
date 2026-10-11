@@ -13,3 +13,13 @@ dashboard/test-results/
 dashboard/playwright-report/
 
 /media/
+
+# Native build outputs
+native/**/.build/
+native/**/build/
+native/**/.gradle/
+native/**/local.properties
+native/**/DerivedData/
+
+/test-results/
+native/apple/*.xcodeproj/

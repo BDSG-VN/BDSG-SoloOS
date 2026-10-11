@@ -14,6 +14,12 @@ nghệ tối thượng cho các nhà khởi nghiệp độc lập (Solopreneur).
 hạ tầng một chủ doanh nghiệp tự lưu trữ, MCP có kiểm soát quyền và giao diện AI
 streaming; các chức năng đã triển khai được liệt kê bên dưới.
 
+## Bản đang phát triển v0.5
+
+Trang chủ công khai tách `/admin`, tài khoản khách tại `/account`, khởi tạo admin một lần, tám mẫu nội dung tiếng Việt; lịch cron/múi giờ/một lần, quyền công cụ theo trợ lý, gói kỹ năng có bước kiểm tra, bảng việc chi tiết và thông báo vận hành. Xem [cài máy chủ riêng](docs/INSTALL.md), [phạm vi tính năng](docs/FEATURE-COVERAGE.md), [đối chiếu gói tham khảo](docs/CAPABILITY-MAP.md).
+
+Ứng dụng native iOS/macOS/Android đang phát triển, chưa phát hành store hoặc kiểm thử thiết bị thật. Bản Cloudflare Workers/D1 đầy đủ **chưa hoàn tất**; [phân tích và phần còn thiếu](docs/WEBSITE-AND-CLOUDFLARE.md). Không coi những mục này là tương đương toàn bộ WordPress hoặc các gói tham khảo.
+
 ## Có trong bản đầu tiên
 
 - Dashboard React tiếng Việt: tổng quan, AI Studio, bộ nhớ, Kanban, MCP, phê duyệt và các phân hệ doanh nghiệp.

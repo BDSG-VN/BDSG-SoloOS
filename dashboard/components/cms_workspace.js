@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { readSSE } from "./stream.js";
 import "./cms.css";
+import SiteSettings from "./site_settings.js";
 const h = React.createElement;
 const TYPES = {
   hero: "Mở đầu",
@@ -110,11 +111,13 @@ export default function CMSWorkspace({
     [tokens, setTokens] = useState(0),
     [gateway, setGateway] = useState(null);
   const controller = useRef(null);
+  const [siteDirty, setSiteDirty] = useState(false);
+  const siteDirtyChange = useCallback((value) => setSiteDirty(value), []);
   const dirty = doc && JSON.stringify(payload(doc)) !== saved;
   useEffect(() => {
-    onDirtyChange?.(Boolean(dirty || busy));
+    onDirtyChange?.(Boolean(dirty || siteDirty || busy));
     const protect = (e) => {
-      if (dirty || busy) {
+      if (dirty || siteDirty || busy) {
         e.preventDefault();
         e.returnValue = "";
       }
@@ -124,7 +127,7 @@ export default function CMSWorkspace({
       window.removeEventListener("beforeunload", protect);
       onDirtyChange?.(false);
     };
-  }, [dirty, busy, onDirtyChange]);
+  }, [dirty, siteDirty, busy, onDirtyChange]);
   const load = async () => {
     const [r, s, m] = await Promise.all([
       api("/cms/content"),
@@ -281,6 +284,20 @@ export default function CMSWorkspace({
   return h(
     "section",
     { className: "cms-workspace" },
+    h(SiteSettings, {
+      api,
+      post,
+      onDirtyChange: siteDirtyChange,
+      disabled: busy,
+      onDraft: async (theme) => {
+        if (!mayLeave()) return false;
+        const draft = await post(`/cms/themes/${theme}/draft`, {});
+        setKind("page");
+        select(draft);
+        await load();
+        return true;
+      },
+    }),
     h(
       "div",
       { className: "cms-heading" },

@@ -71,3 +71,57 @@ def schedule(body: Schedule, request: Request):
 @router.put("/schedules/{identifier}")
 def update_schedule(identifier: str, body: Schedule, request: Request):
     return request.app.state.automation.schedule(body, identifier)
+
+
+@router.delete("/schedules/{identifier}")
+def delete_schedule(identifier: str, request: Request):
+    return request.app.state.automation.delete_schedule(identifier)
+
+
+@router.post("/schedules/preview")
+def preview(body: Schedule):
+    import time
+
+    cursor = time.time()
+    values = []
+    for _ in range(1 if body.kind == "once" else 5):
+        cursor = body.next_after(cursor)
+        values.append(cursor)
+    return {"times": values, "timezone": body.timezone}
+
+
+@router.get("/pack")
+def export_pack(request: Request):
+    from fastapi.responses import JSONResponse
+
+    from server.core.bundles import export
+
+    return JSONResponse(
+        export(request.app.state.automation),
+        headers={
+            "Content-Disposition": 'attachment; filename="soloos-pack.json"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+@router.post("/pack/preview")
+def preview_pack(body: dict):
+    from server.core.bundles import Bundle
+
+    bundle = Bundle.model_validate(body)
+    return {
+        "title": bundle.title,
+        "items": {
+            kind: [v.title for v in getattr(bundle, kind).values()]
+            for kind in ("skills", "agents", "workflows")
+        },
+        "notice": "Gói sẽ được nhập ở trạng thái tắt. Trợ lý không được cấp kết nối.",
+    }
+
+
+@router.post("/pack/import")
+def import_pack(body: dict, request: Request):
+    from server.core.bundles import Bundle, install
+
+    return install(request.app.state.automation, Bundle.model_validate(body))

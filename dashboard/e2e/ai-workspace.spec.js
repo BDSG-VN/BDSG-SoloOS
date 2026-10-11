@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures.js";
 import { readFileSync, mkdirSync } from "node:fs";
 const token = readFileSync(new URL("../../.env", import.meta.url), "utf8")
   .split("\n")
@@ -10,6 +10,7 @@ test("AI accounts, project sessions and durable workflow results", async ({
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/admin");
+  await page.getByLabel("Dùng khóa máy chủ").check();
   await page.getByLabel("Khóa chủ doanh nghiệp").fill(token);
   await page.getByRole("button", { name: "Mở không gian làm việc" }).click();
   await page.getByRole("button", { name: "Tài khoản AI", exact: true }).click();

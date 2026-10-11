@@ -32,7 +32,7 @@ async def test_snapshot_and_waiting_does_not_replay_tool(queue):
     assert run["definition"]["instructions"] == "\n\nUse verified facts"
     calls = []
 
-    async def call(connector, tool, arguments, actor, run_id):
+    async def call(connector, tool, arguments, actor, run_id, agent_id=None):
         calls.append((connector, tool, arguments, actor))
         return {"status": "requires_confirmation", "confirmation_id": "approval"}
 

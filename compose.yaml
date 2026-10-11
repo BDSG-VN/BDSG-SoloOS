@@ -19,6 +19,8 @@ services:
       - no-new-privileges:true
   caddy:
     image: caddy:2-alpine
+    environment:
+      BDSG_DOMAIN: ${BDSG_DOMAIN:-phamvanthu.com}
     restart: unless-stopped
     depends_on:
       soloos:

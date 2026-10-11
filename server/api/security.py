@@ -63,6 +63,15 @@ def principal(request: Request) -> str:
             return "owner"
         if hmac.compare_digest(token.encode(), settings.agent_token.encode()):
             return "agent"
+        if token.startswith("dev_"):
+            from server.core.devices import permits
+
+            device = request.app.state.devices.authenticate(token)
+            if device:
+                if not permits(device["scopes"], request.method, request.url.path):
+                    raise HTTPException(403, "Thiết bị chưa được cấp quyền cho chức năng này.")
+                request.state.device_id = device["id"]
+                return "owner"
         raise HTTPException(401, "Invalid bearer credential")
     if session_data(request):
         return "owner"
