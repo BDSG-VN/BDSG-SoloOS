@@ -67,6 +67,7 @@ class MCPHub:
     def __init__(self, store: MCPStore, session_factory: Callable = mcp_session):
         self.store = store
         self._session_factory = session_factory
+        self.execution_guard = lambda run_id: False
 
     def _policy(self, connector_id: str, tool: str) -> Connector:
         config = self.store.connector(connector_id)
@@ -108,14 +109,22 @@ class MCPHub:
             and (config.permission != Permission.READ_ONLY or config.tools[name] is True)
         ]
 
-    async def call_tool(self, connector_id: str, tool: str, arguments: dict, *, actor: str) -> dict:
+    async def call_tool(
+        self,
+        connector_id: str,
+        tool: str,
+        arguments: dict,
+        *,
+        actor: str,
+        run_id: str | None = None,
+    ) -> dict:
         # Freeze a JSON copy so concurrent caller mutation cannot alter what was approved.
         import json
 
         arguments = json.loads(canonical(arguments))
         try:
             config = self._policy(connector_id, tool)
-            return await self._dispatch(config, tool, arguments, actor)
+            return await self._dispatch(config, tool, arguments, actor, run_id=run_id)
         except PolicyError:
             self.store.audit("denied", connector_id, tool, actor)
             raise
@@ -126,10 +135,15 @@ class MCPHub:
         if config.revision != payload["revision"]:
             raise PolicyError("Connector policy changed; request a new confirmation")
         return await self._dispatch(
-            config, payload["tool"], payload["arguments"], actor, approved=payload
+            config,
+            payload["tool"],
+            payload["arguments"],
+            actor,
+            approved=payload,
+            run_id=payload.get("run_id"),
         )
 
-    async def _dispatch(self, config, tool_name, arguments, actor, approved=None):
+    async def _dispatch(self, config, tool_name, arguments, actor, approved=None, run_id=None):
         async with asyncio.timeout(45):
             async with self._session_factory(config, self.store.credentials(config.id)) as session:
                 tools = await self._tools(session)
@@ -148,6 +162,8 @@ class MCPHub:
                     raise PolicyError("Connector changed during invocation")
                 if approved and approved["schema_hash"] != schema_hash:
                     raise PolicyError("Tool definition changed; request a new confirmation")
+                if run_id and not self.execution_guard(run_id):
+                    raise PolicyError("Workflow is no longer active")
                 if current.permission == Permission.REQUIRES_CONFIRMATION and approved is None:
                     confirmation_id = self.store.request_confirmation(
                         {
@@ -157,6 +173,7 @@ class MCPHub:
                             "revision": config.revision,
                             "schema_hash": schema_hash,
                             "actor": actor,
+                            **({"run_id": run_id} if run_id else {}),
                         }
                     )
                     self.store.audit("confirmation_requested", config.id, tool_name, actor)

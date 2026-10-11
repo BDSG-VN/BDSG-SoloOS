@@ -177,3 +177,12 @@ Bản đầu bổ sung Customer 360, Inbox, chiến dịch marketing, báo giá/
 ## CMS & AI website builder (v0.2.0)
 
 Quản lý bài viết/trang, chuyên mục, thẻ, ảnh, SEO và lịch sử phiên bản tại `/admin`. Tạo bản thảo bằng AI, xem trước và xuất bản; chọn trang đã xuất bản làm trang chủ. [Hướng dẫn CMS](docs/CMS.md).
+
+## Tài khoản AI và tự động hóa (v0.3.0)
+
+- ChatGPT: đăng nhập qua quyền ứng dụng chính thức, tài khoản mã hóa, đổi model và thống kê lượt dùng. Cần chính chủ cấp quyền; không cần nhập API key.
+- Claude Code: adapter chạy binary chính thức do người vận hành cài và đăng nhập; chưa được cài sẵn trong image.
+- Nhiều cuộc trò chuyện và dự án, tìm kiếm, ghim, lưu trữ, xuất JSON.
+- Kỹ năng, trợ lý, quy trình AI/MCP/ghi chú, hàng đợi lưu bền vững, lịch lặp, phê duyệt và hộp kết quả.
+
+Xem [thiết lập tài khoản AI](docs/AI-ACCOUNTS.md) và [phạm vi đã có/chưa có](docs/FEATURE-COVERAGE.md). Triển khai hiện chạy một worker cho mỗi thư mục dữ liệu; không dùng nhiều Uvicorn worker với cùng SQLite automation. Native Claude, đăng nhập thuê bao thật và toàn bộ tính năng mở rộng cần được nghiệm thu riêng; bản này không tuyên bố tương đương đầy đủ gói tham khảo.

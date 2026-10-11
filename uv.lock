@@ -50,7 +50,7 @@ wheels = [
 
 [[package]]
 name = "bdsg-solo-os"
-version = "0.2.0"
+version = "0.3.0"
 source = { virtual = "." }
 dependencies = [
     { name = "cryptography" },
@@ -59,6 +59,7 @@ dependencies = [
     { name = "jsonschema" },
     { name = "mcp" },
     { name = "pillow" },
+    { name = "pyjwt", extra = ["crypto"] },
     { name = "uvicorn" },
 ]
 
@@ -77,6 +78,7 @@ requires-dist = [
     { name = "jsonschema", specifier = ">=4.23" },
     { name = "mcp", specifier = ">=1.28,<2" },
     { name = "pillow", specifier = ">=11,<13" },
+    { name = "pyjwt", extras = ["crypto"], specifier = ">=2.10,<3" },
     { name = "uvicorn", specifier = ">=0.30,<1" },
 ]
 

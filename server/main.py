@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import hmac
 import sys
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,12 +14,15 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from server.api.security import COOKIE, mint_session, owner, principal, session_data, token_hash
 from server.config import ROOT, Settings
+from server.core.ai_accounts import AIAccounts
+from server.core.automation import Automation
 from server.core.brain import Brain
 from server.core.business import BusinessStore
 from server.core.cms import CMSStore, ConflictError
 from server.core.mcp_hub import MCPHub
 from server.core.mcp_store import Connector, MCPStore, Permission, PolicyError
 from server.core.tasks import TaskQueue
+from server.core.workspace import Workspace
 from server.engines.provider_specs import PROVIDERS
 
 
@@ -79,9 +83,11 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
         app.state.store = MCPStore(config.data_dir / "system/mcp.db", config.store_key)
         app.state.hub = hub_factory(app.state.store)
         app.state.brain = Brain(config.data_dir / "brains/default_brain")
+        app.state.workspace = Workspace(config.data_dir / "system/workspace.db", app.state.brain)
         app.state.tasks = TaskQueue(config.data_dir / "system/tasks.db")
         app.state.business = BusinessStore(config.data_dir / "system/business.db", config.store_key)
         app.state.cms = CMSStore(config.data_dir / "system/cms.db", config.store_key)
+        app.state.ai = AIAccounts(config.data_dir / "system/ai.db", config.store_key)
         if not any(c["id"] == "second-brain" for c in app.state.store.connectors()):
             app.state.store.put_connector(
                 Connector(
@@ -142,11 +148,21 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
                         }
                     },
                 )
-        yield
+        app.state.automation = Automation(config.data_dir / "system/automation.db")
+        app.state.hub.execution_guard = app.state.automation.active
+        from server.engines.automation import worker
+
+        task = asyncio.create_task(worker(app.state))
+        try:
+            yield
+        finally:
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
 
     app = FastAPI(
         title="BDSG Solo-OS",
-        version="0.2.0",
+        version="0.3.0",
         lifespan=lifespan,
         docs_url=None,
         redoc_url=None,
@@ -207,6 +223,12 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
     async def policy_error(request, exc):
         return JSONResponse({"detail": str(exc)}, status_code=403)
 
+    from server.engines.chatgpt_auth import SignInError
+
+    @app.exception_handler(SignInError)
+    async def sign_in_error(request, exc):
+        return JSONResponse({"detail": str(exc)}, status_code=400)
+
     @app.exception_handler(ConflictError)
     async def conflict_error(request, exc):
         return JSONResponse({"detail": str(exc)}, status_code=409)
@@ -217,7 +239,7 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
 
     @app.get("/api/health")
     def health():
-        return {"status": "ok", "version": "0.2.0"}
+        return {"status": "ok", "version": "0.3.0"}
 
     @app.post("/api/session")
     def login(body: Login, request: Request, response: Response):
@@ -281,6 +303,7 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
             raise PolicyError("Confirmation no longer pending")
         store.decide(confirmation_id, body.approved, "owner")
         if not body.approved:
+            request.app.state.automation.settle(confirmation_id, {"status": "rejected"})
             request.app.state.business.settle_confirmation(confirmation_id, {"status": "rejected"})
             return {"status": "rejected"}
         try:
@@ -288,8 +311,10 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
                 confirmation_id, actor=pending["payload"]["actor"]
             )
         except BaseException:
+            request.app.state.automation.settle(confirmation_id, {"status": "uncertain"})
             request.app.state.business.settle_confirmation(confirmation_id, {"status": "uncertain"})
             raise
+        request.app.state.automation.settle(confirmation_id, result)
         request.app.state.business.settle_confirmation(confirmation_id, result)
         return result
 
@@ -317,13 +342,23 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
         return request.app.state.tasks.move(task_id, body.state)
 
     @app.get("/api/engines", dependencies=[Depends(owner)])
-    def engines(request: Request):
+    async def engines(request: Request):
         gateway = request.app.state.cms.gateway()
+        active = request.app.state.ai.setting("active_account", "gateway")
+        if active == "claude-native":
+            from server.engines.claude_native import status
+
+            connected = (await status())["connected"]
+        else:
+            connected = active != "gateway" and request.app.state.ai.account(active)["connected"]
 
         return {
             "providers": PROVIDERS,
-            "model": gateway["model"],
-            "configured": bool(gateway["base_url"]),
+            "model": gateway["model"]
+            if active == "gateway"
+            else request.app.state.ai.setting("model:" + active, "") or "solo-default",
+            "configured": bool(gateway["base_url"]) if active == "gateway" else bool(connected),
+            "active_account": active,
         }
 
     @app.get("/api/conversations/{conversation}", dependencies=[Depends(owner)])
@@ -334,6 +369,7 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
     async def chat(body: ChatInput, request: Request):
         from server.engines.router import stream_chat
 
+        request.app.state.workspace.context(body.conversation)
         return StreamingResponse(
             stream_chat(body, request.app.state),
             media_type="text/event-stream",
@@ -353,9 +389,15 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
 
     app.include_router(business_router)
     app.include_router(webhooks)
+    from server.api.ai import router as ai_router
+    from server.api.automation import router as automation_router
     from server.api.cms import public as cms_public
     from server.api.cms import router as cms_router
+    from server.api.workspace import router as workspace_router
 
+    app.include_router(automation_router)
+    app.include_router(workspace_router)
+    app.include_router(ai_router)
     app.include_router(cms_router)
     app.include_router(cms_public)
     dist = ROOT / "dashboard/dist"

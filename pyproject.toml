@@ -1,6 +1,6 @@
 [project]
 name = "bdsg-solo-os"
-version = "0.2.0"
+version = "0.3.0"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.115,<1",
@@ -10,6 +10,7 @@ dependencies = [
   "jsonschema>=4.23",
   "httpx>=0.28,<1",
   "pillow>=11,<13",
+  "pyjwt[crypto]>=2.10,<3",
 ]
 
 [dependency-groups]

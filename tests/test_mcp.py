@@ -301,3 +301,18 @@ async def test_real_streamable_http_mcp(tmp_path):
     finally:
         process.terminate()
         process.wait(timeout=5)
+
+
+async def test_cancelled_workflow_cannot_use_approved_confirmation(system):
+    store, config, session, hub = system
+    store.put_connector(replace(config, permission=Permission.REQUIRES_CONFIRMATION))
+    active = True
+    hub.execution_guard = lambda run_id: active and run_id == "run-one"
+    result = await hub.call_tool(
+        "service", "write", {"message": "write"}, actor="agent", run_id="run-one"
+    )
+    store.decide(result["confirmation_id"], True, "owner")
+    active = False
+    with pytest.raises(PolicyError, match="no longer active"):
+        await hub.execute_confirmation(result["confirmation_id"], actor="agent")
+    assert not session.calls

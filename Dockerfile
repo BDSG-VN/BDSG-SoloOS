@@ -12,7 +12,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev
 COPY server/ ./server/
 COPY system/templates/default_brain/ ./seed_brain/
-COPY scripts/container_start.py ./scripts/container_start.py
+COPY scripts/container_start.py scripts/chatgpt_login.py ./scripts/
 COPY --from=dashboard /dashboard/dist ./dashboard/dist/
 RUN useradd --uid 10001 --create-home soloos && mkdir /data && chown soloos:soloos /data
 ENV BDSG_DATA_DIR=/data PATH=/app/.venv/bin:$PATH

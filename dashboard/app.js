@@ -14,6 +14,9 @@ import {
   Terminal,
 } from "lucide-react";
 import OpenUIRender, { soloUIPrompt } from "./components/openui_render.js";
+import Automation from "./components/automation.js";
+import Sessions from "./components/sessions.js";
+import AIAccounts, { accountLanding } from "./components/ai_accounts.js";
 import CMSWorkspace from "./components/cms_workspace.js";
 import BusinessWorkspace from "./components/business_workspace.js";
 import KnowledgeGraph from "./components/knowledge_graph.js";
@@ -44,6 +47,9 @@ const ICONS = {
   business: LayoutDashboard,
   cms: BookOpen,
   chat: Bot,
+  accounts: Plug,
+  sessions: BookOpen,
+  automation: CheckSquare,
   brain: BookOpen,
   tasks: CheckSquare,
   mcp: Plug,
@@ -145,7 +151,9 @@ function Login({ onLogin }) {
 function App() {
   const [authenticated, setAuthenticated] = useState(false),
     [loading, setLoading] = useState(true);
-  const [page, setPageValue] = useState("overview"),
+  const [page, setPageValue] = useState(
+      accountLanding ? "accounts" : "overview",
+    ),
     [lang, setLang] = useState("vi");
   const [cmsDirty, setCMSDirty] = useState(false);
   const setPage = (next) => {
@@ -160,6 +168,7 @@ function App() {
     [tasks, setTasks] = useState([]),
     [connectors, setConnectors] = useState([]),
     [approvals, setApprovals] = useState([]);
+  const [conversation, setConversation] = useState("default");
   const [history, setHistory] = useState([]),
     [engine, setEngine] = useState({}),
     [model, setModel] = useState("solo-default");
@@ -194,7 +203,7 @@ function App() {
       api("/tasks"),
       api("/mcp/connectors"),
       api("/confirmations"),
-      api("/conversations/default"),
+      api(`/conversations/${conversation}`),
       api("/engines"),
     ]);
     setNotes(ns);
@@ -204,7 +213,7 @@ function App() {
     setHistory(hs);
     setEngine(es);
     setModel((current) => (current === "solo-default" ? es.model : current));
-  }, []);
+  }, [conversation]);
   const initialize = useCallback(async () => {
     const session = await api("/session");
     csrf = session.csrf;
@@ -247,7 +256,12 @@ function App() {
               "Content-Type": "application/json",
               "X-CSRF-Token": csrf,
             },
-            body: JSON.stringify({ message, model, ui_prompt: soloUIPrompt }),
+            body: JSON.stringify({
+              message,
+              model,
+              conversation,
+              ui_prompt: soloUIPrompt,
+            }),
           },
       demo,
     });
@@ -403,6 +417,28 @@ function App() {
       ),
     );
 
+  if (page === "automation") content = h(Automation, { api, post });
+  if (page === "sessions")
+    content = h(Sessions, {
+      api,
+      post,
+      onOpen: (s) => {
+        if (chatBusy) return;
+        setConversation(s.id);
+        setModel(s.model);
+        setStream(null);
+        setPage("chat");
+      },
+    });
+  if (page === "accounts")
+    content = h(AIAccounts, {
+      api,
+      post,
+      onChange: async () => {
+        setModel("solo-default");
+        await refresh();
+      },
+    });
   if (page === "cms")
     content = h(CMSWorkspace, {
       api,
@@ -436,17 +472,22 @@ function App() {
       "div",
       { className: "chat-layout panel" },
       h(
+        "button",
+        { onClick: () => setPage("accounts"), disabled: chatBusy },
+        "Quản lý tài khoản AI",
+      ),
+      h(
         "div",
         { className: "chat-toolbar" },
         h(
           "span",
           { className: "badge" },
-          engine.configured ? "Gateway đã cấu hình" : "Chưa cấu hình Gateway",
+          engine.configured ? "Đã kết nối nguồn AI" : "Chưa kết nối nguồn AI",
         ),
         h(
           "label",
           null,
-          "Model alias",
+          "Model",
           h("input", {
             value: model,
             onChange: (e) => setModel(e.target.value),
@@ -1065,7 +1106,7 @@ function App() {
       h(
         "footer",
         null,
-        "BDSG Foundation · MIT · v0.2",
+        "BDSG Foundation · MIT · v0.3",
         h("span", null, "RENT THE MODEL. OWN THE BRAIN."),
       ),
     ),

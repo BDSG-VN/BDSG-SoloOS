@@ -10,7 +10,10 @@ from server.engines.router import event
 
 async def generate_content(body, state):
     gateway = state.cms.gateway()
-    if not gateway["base_url"]:
+    account_id = (
+        state.ai.setting("active_account", "gateway") if getattr(state, "ai", None) else "gateway"
+    )
+    if not gateway["base_url"] and account_id == "gateway":
         yield event("error", message="Chưa cấu hình AI. Mở Cấu hình AI trong mục Nội dung.")
         return
     current = state.cms.get(body.content_id) if body.content_id else None
@@ -45,34 +48,54 @@ async def generate_content(body, state):
     }
     text, finished = "", False
     try:
-        async with httpx.AsyncClient(
-            timeout=httpx.Timeout(120, connect=15), trust_env=False
-        ) as client:
-            async with client.stream(
-                "POST",
-                gateway["base_url"] + "/chat/completions",
-                headers={"Authorization": "Bearer " + gateway["api_key"]},
-                json=payload,
-            ) as response:
-                response.raise_for_status()
-                async for line in response.aiter_lines():
-                    if not line.startswith("data:"):
-                        continue
-                    data = line[5:].strip()
-                    if data == "[DONE]":
-                        break
-                    choices = json.loads(data).get("choices", [])
-                    if not choices:
-                        continue
-                    choice = choices[0]
-                    chunk = choice.get("delta", {}).get("content") or ""
-                    if len(text) + len(chunk) > 200000:
-                        raise ValueError("Response too large")
-                    text += chunk
-                    if chunk:
-                        yield event("token", text=chunk)
-                    if choice.get("finish_reason") == "stop":
-                        finished = True
+        if account_id == "claude-native":
+            from server.engines.claude_native import stream_text
+
+            async for chunk in stream_text(prompt + "\n" + user):
+                text += chunk
+                yield event("token", text=chunk)
+            finished = True
+        elif account_id != "gateway":
+            from server.engines.chatgpt import response_round, selected_model
+
+            model = await selected_model(state, account_id)
+            async for item in response_round(
+                state, account_id, model, prompt, [{"role": "user", "content": user}], source="cms"
+            ):
+                if item["type"] == "token":
+                    text += item["text"]
+                    yield event("token", text=item["text"])
+                elif item["type"] == "completed":
+                    finished = True
+        else:
+            async with httpx.AsyncClient(
+                timeout=httpx.Timeout(120, connect=15), trust_env=False
+            ) as client:
+                async with client.stream(
+                    "POST",
+                    gateway["base_url"] + "/chat/completions",
+                    headers={"Authorization": "Bearer " + gateway["api_key"]},
+                    json=payload,
+                ) as response:
+                    response.raise_for_status()
+                    async for line in response.aiter_lines():
+                        if not line.startswith("data:"):
+                            continue
+                        data = line[5:].strip()
+                        if data == "[DONE]":
+                            break
+                        choices = json.loads(data).get("choices", [])
+                        if not choices:
+                            continue
+                        choice = choices[0]
+                        chunk = choice.get("delta", {}).get("content") or ""
+                        if len(text) + len(chunk) > 200000:
+                            raise ValueError("Response too large")
+                        text += chunk
+                        if chunk:
+                            yield event("token", text=chunk)
+                        if choice.get("finish_reason") == "stop":
+                            finished = True
         if not finished:
             raise ValueError("Incomplete generation")
         cleaned = text.strip()

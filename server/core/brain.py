@@ -29,13 +29,13 @@ class Brain:
             )
             db.execute("INSERT INTO messages_fts VALUES (?,?)", (content, message_id))
 
-    def messages(self, conversation: str = "default") -> list[dict]:
+    def messages(self, conversation: str = "default", limit: int = 50) -> list[dict]:
         with sqlite3.connect(self.db_path) as db:
             db.row_factory = sqlite3.Row
             rows = db.execute(
                 "SELECT * FROM (SELECT * FROM messages WHERE conversation=? "
-                "ORDER BY at DESC LIMIT 50) ORDER BY at",
-                (conversation,),
+                "ORDER BY at DESC LIMIT ?) ORDER BY at",
+                (conversation, limit),
             ).fetchall()
         return [dict(row) for row in rows]
 

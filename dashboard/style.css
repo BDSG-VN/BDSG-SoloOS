@@ -1181,3 +1181,16 @@ pre {
 .business-grid button {
   margin: 8px 8px 0 0;
 }
+
+.workspace-panel { display: grid; gap: 16px; align-content: start; }
+.workspace-panel h2, .workspace-panel h3, .workspace-panel p { margin: 0; }
+.workspace-panel label { display: grid; gap: 7px; margin: 10px 0; }
+.workspace-panel label:has(input[type="checkbox"]) { display: flex; align-items: center; gap: 10px; }
+.workspace-panel input[type="checkbox"] { width: 18px; min-height: 18px; margin: 0; }
+.workspace-panel fieldset { min-width: 0; margin: 16px 0; padding: 16px; border: 1px solid var(--border, #353b4b); border-radius: 12px; }
+.workspace-panel legend { padding: 0 8px; color: #b8efb5; }
+.workspace-panel button { margin: 4px; }
+.workspace-panel article, .workspace-panel details { border: 1px solid #353b4b; border-radius: 12px; padding: 16px; }
+.workspace-panel summary { cursor: pointer; line-height: 1.6; overflow-wrap: anywhere; }
+.workspace-panel textarea { min-height: 100px; width: 100%; }
+.workspace-panel pre { max-width: 100%; padding: 12px; background: #11151e; border-radius: 8px; }

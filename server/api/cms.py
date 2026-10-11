@@ -102,17 +102,29 @@ def preview(content_id: str, request: Request):
 
 
 @router.get("/settings")
-def settings(request: Request):
+async def settings(request: Request):
     cms = request.app.state.cms
     gateway = cms.gateway()
     homepage = cms.homepage()
+    active = request.app.state.ai.setting("active_account", "gateway")
+    chatgpt_connected = (
+        active not in {"gateway", "claude-native"}
+        and request.app.state.ai.account(active)["connected"]
+    )
+    if active == "claude-native":
+        from server.engines.claude_native import status
+
+        connected = (await status())["connected"]
+    else:
+        connected = bool(gateway["base_url"]) if active == "gateway" else bool(chatgpt_connected)
     return {
         "homepage_id": homepage["id"] if homepage else None,
         "gateway": {
             "base_url": gateway["base_url"],
             "model": gateway["model"],
             "has_api_key": bool(gateway["api_key"]),
-            "configured": bool(gateway["base_url"]),
+            "configured": connected,
+            "active_provider": "chatgpt" if chatgpt_connected else active,
         },
     }
 

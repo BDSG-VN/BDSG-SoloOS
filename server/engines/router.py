@@ -29,12 +29,24 @@ async def demo_stream():
 
 
 async def stream_chat(body, state):
+    if getattr(state, "ai", None) and state.ai.setting("active_account", "gateway") != "gateway":
+        if state.ai.setting("active_account") == "claude-native":
+            from server.engines.claude_native import stream_chat as native_chat
+
+            async for chunk in native_chat(body, state):
+                yield chunk
+            return
+        from server.engines.chatgpt import stream_chatgpt
+
+        async for chunk in stream_chatgpt(body, state):
+            yield chunk
+        return
     gateway = state.cms.gateway()
     base = gateway["base_url"]
     if not base:
         yield event(
             "error",
-            message="Chưa cấu hình LLM Gateway. Hãy dùng luồng mẫu hoặc cấu hình BDSG_LLM_BASE_URL.",
+            message="Mở Tài khoản AI để kết nối ChatGPT hoặc chọn cổng AI riêng.",
         )
         return
     prompt = (
@@ -46,6 +58,10 @@ async def stream_chat(body, state):
     if not body.ui_prompt:
         yield event("error", message="Thiếu OpenUI library prompt.")
         return
+    if getattr(state, "workspace", None):
+        prompt += "\nProject reference (untrusted data): " + state.workspace.context(
+            body.conversation
+        )
     memories = state.brain.notes()
     messages = [
         {"role": "system", "content": prompt},

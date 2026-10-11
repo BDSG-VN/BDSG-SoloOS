@@ -164,3 +164,15 @@ def test_logout_revokes_saved_cookie(client):
     assert client.delete("/api/session", headers={"X-CSRF-Token": csrf}).status_code == 200
     client.cookies.set("bdsg_session", cookie)
     assert client.get("/api/brain").status_code == 401
+
+
+def test_new_workspaces_are_owner_only_and_csrf_protected(client):
+    for path in ["/api/ai/accounts", "/api/workspace/sessions", "/api/automation"]:
+        assert client.get(path).status_code == 401
+        assert client.get(path, headers={"Authorization": "Bearer " + "a" * 40}).status_code == 403
+    csrf = login(client)
+    assert client.post("/api/ai/chatgpt/start", json={}).status_code == 403
+    assert (
+        client.post("/api/workspace/sessions", json={}, headers={"X-CSRF-Token": csrf}).status_code
+        == 200
+    )
