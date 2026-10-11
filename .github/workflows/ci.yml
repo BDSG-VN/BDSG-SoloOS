@@ -1,0 +1,53 @@
+name: Verify Solo-OS
+on: [push, pull_request]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+      - run: uv sync --frozen
+      - run: uv run ruff check server tests
+      - run: uv run pytest -q
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - run: npm ci
+        working-directory: dashboard
+      - run: npm test
+        working-directory: dashboard
+      - run: npm run build
+        working-directory: dashboard
+      - run: uv run python scripts/init_env.py
+      - run: uv run uvicorn server.main:create_app --factory --env-file .env --host 127.0.0.1 --port 8000 > /tmp/soloos-api.log 2>&1 &
+      - run: npx playwright install --with-deps chromium
+        working-directory: dashboard
+      - run: npm run test:e2e
+        working-directory: dashboard
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: bdsg-soloos:test
+      - name: Start container and verify API and bundled dashboard
+        run: |
+          python3 - <<'PY'
+          import base64, secrets
+          with open('/tmp/soloos.env', 'w') as file:
+              file.write('BDSG_OWNER_TOKEN=' + secrets.token_urlsafe(40) + '\n')
+              file.write('BDSG_AGENT_TOKEN=' + secrets.token_urlsafe(40) + '\n')
+              file.write('BDSG_STORE_KEY=' + base64.urlsafe_b64encode(secrets.token_bytes(32)).decode() + '\n')
+          PY
+          docker run -d --name soloos --env-file /tmp/soloos.env -p 127.0.0.1:8080:8000 bdsg-soloos:test
+          curl --retry 20 --retry-delay 2 --retry-connrefused --fail http://127.0.0.1:8080/api/health
+          curl --fail http://127.0.0.1:8080/ | grep 'BDSG SoloOS'

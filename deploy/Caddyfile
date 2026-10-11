@@ -1,0 +1,9 @@
+phamvanthu.com {
+    encode zstd gzip
+    request_body {
+        max_size 1MB
+    }
+    reverse_proxy soloos:8000 {
+        flush_interval -1
+    }
+}
