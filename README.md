@@ -16,7 +16,7 @@ streaming; các chức năng đã triển khai được liệt kê bên dưới.
 
 ## Có trong bản đầu tiên
 
-- Dashboard React tiếng Việt: tổng quan, AI Studio, bộ nhớ, Kanban, MCP, phê duyệt.
+- Dashboard React tiếng Việt: tổng quan, AI Studio, bộ nhớ, Kanban, MCP, phê duyệt và các phân hệ doanh nghiệp.
 - FastAPI với đăng nhập cookie HttpOnly, CSRF gắn phiên, CORS allowlist, giới hạn
   tần suất, kiểm tra Host và các header bảo mật.
 - MCP thật qua `stdio` và Streamable HTTP, discovery có phân trang, kiểm tra JSON
@@ -139,16 +139,21 @@ qua runtime OpenUI chính thức. GitHub Actions kiểm tra mã và build Docker
 server/
   main.py                 FastAPI, middleware và API
   api/security.py         Đăng nhập, principal và quyền chủ
+  api/business.py         CRM, Inbox, Marketing, Sales, CSKH, Thu chi, HR, Analytics
   core/mcp_hub.py          Cổng thực thi MCP duy nhất
   core/mcp_store.py        Credentials, quyền, phê duyệt, audit
   core/brain.py            Markdown + SQLite/FTS5
   core/tasks.py            Kanban lưu bền vững
+  core/business.py         SQLite nghiệp vụ và đồng bộ định danh
   core/self_learning.py    Hàm lưu bộ nhớ đã duyệt + Git opt-in
   engines/router.py        Gateway streaming + vòng công cụ MCP
   engines/provider_specs.py
   plugins/brain_mcp.py     Máy chủ MCP Second Brain
+  plugins/business_mcp.py  AI đọc/ghi nghiệp vụ qua MCP
+  integrations/catalog.py Bằng chứng và mẫu MCP chính thức
 dashboard/
   components/openui_render.js
+  components/business_workspace.js
   components/knowledge_graph.js
   i18n/
 brains/default_brain/      Dữ liệu riêng, khởi tạo khi cài/chạy

@@ -9,3 +9,8 @@ dashboard/dist
 **/*.db-wal
 .pytest_cache
 artifacts
+
+brains
+.env.*
+dashboard/test-results
+dashboard/playwright-report
