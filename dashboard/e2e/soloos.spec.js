@@ -76,14 +76,15 @@ test("owner signs in, sees streaming UI, submits a form and approves a real MCP 
   await page
     .getByLabel("Khách hàng", { exact: true })
     .selectOption({ label: customer });
-  await page.getByLabel("Tên báo giá").fill("Gói tư vấn E2E");
+  const saleTitle = `Gói tư vấn E2E ${Date.now()}`;
+  await page.getByLabel("Tên báo giá").fill(saleTitle);
   await page.getByLabel("Sản phẩm / Dịch vụ").fill("Tư vấn");
   await page.getByLabel("Số lượng").fill("2");
   await page.getByLabel("Đơn giá VND").fill("125000");
   await page.getByRole("button", { name: "Lưu", exact: true }).click();
   const sale = page
     .locator("article")
-    .filter({ has: page.getByRole("heading", { name: "Gói tư vấn E2E" }) })
+    .filter({ has: page.getByRole("heading", { name: saleTitle }) })
     .last();
   await sale.getByRole("button", { name: "Chuyển thành đơn" }).click();
   await sale.getByRole("button", { name: "Ghi nhận đã thu tiền" }).click();

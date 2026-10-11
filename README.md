@@ -173,3 +173,7 @@ Tham khảo [quyết định kiến trúc](docs/ARCHITECTURE.md) và
 ## Điều hành doanh nghiệp đa kênh
 
 Bản đầu bổ sung Customer 360, Inbox, chiến dịch marketing, báo giá/đơn hàng, ticket hỗ trợ, sổ thu chi, nhân sự và analytics. Các dữ liệu được lưu cục bộ; AI ghi nghiệp vụ qua MCP phải chờ chủ hệ thống phê duyệt. Đọc [phạm vi chức năng và ma trận MCP chính thức](docs/INTEGRATIONS.md) để phân biệt chức năng đã chạy và tích hợp đang chờ tài khoản/nhà cung cấp.
+
+## CMS & AI website builder (v0.2.0)
+
+Quản lý bài viết/trang, chuyên mục, thẻ, ảnh, SEO và lịch sử phiên bản tại `/admin`. Tạo bản thảo bằng AI, xem trước và xuất bản; chọn trang đã xuất bản làm trang chủ. [Hướng dẫn CMS](docs/CMS.md).

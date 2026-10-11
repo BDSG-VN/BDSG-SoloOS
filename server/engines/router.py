@@ -6,7 +6,6 @@ The gateway URL and credential are server-owned, never supplied by the model/bro
 
 import asyncio
 import json
-import os
 
 import httpx
 
@@ -30,7 +29,8 @@ async def demo_stream():
 
 
 async def stream_chat(body, state):
-    base = os.getenv("BDSG_LLM_BASE_URL", "").rstrip("/")
+    gateway = state.cms.gateway()
+    base = gateway["base_url"]
     if not base:
         yield event(
             "error",
@@ -79,12 +79,16 @@ async def stream_chat(body, state):
                         },
                     }
                 )
-        headers = {"Authorization": "Bearer " + os.getenv("BDSG_LLM_API_KEY", "")}
+        headers = {"Authorization": "Bearer " + gateway["api_key"]}
         output = ""
         async with httpx.AsyncClient(timeout=120, headers=headers, trust_env=False) as client:
             for _ in range(4):
                 calls, round_text = {}, ""
-                payload = {"model": body.model, "messages": messages, "stream": True}
+                payload = {
+                    "model": gateway["model"] if body.model == "solo-default" else body.model,
+                    "messages": messages,
+                    "stream": True,
+                }
                 if specs:
                     payload["tools"] = specs
                 async with client.stream(

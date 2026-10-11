@@ -14,3 +14,5 @@ brains
 .env.*
 dashboard/test-results
 dashboard/playwright-report
+
+media

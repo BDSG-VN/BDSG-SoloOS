@@ -14,6 +14,7 @@ import {
   Terminal,
 } from "lucide-react";
 import OpenUIRender, { soloUIPrompt } from "./components/openui_render.js";
+import CMSWorkspace from "./components/cms_workspace.js";
 import BusinessWorkspace from "./components/business_workspace.js";
 import KnowledgeGraph from "./components/knowledge_graph.js";
 import { messages } from "./i18n/index.js";
@@ -41,6 +42,7 @@ const post = (path, data, method = "POST") =>
 const ICONS = {
   overview: LayoutDashboard,
   business: LayoutDashboard,
+  cms: BookOpen,
   chat: Bot,
   brain: BookOpen,
   tasks: CheckSquare,
@@ -143,8 +145,17 @@ function Login({ onLogin }) {
 function App() {
   const [authenticated, setAuthenticated] = useState(false),
     [loading, setLoading] = useState(true);
-  const [page, setPage] = useState("overview"),
+  const [page, setPageValue] = useState("overview"),
     [lang, setLang] = useState("vi");
+  const [cmsDirty, setCMSDirty] = useState(false);
+  const setPage = (next) => {
+    if (
+      next === page ||
+      !cmsDirty ||
+      window.confirm("Bản nội dung chưa lưu. Rời khu biên tập?")
+    )
+      setPageValue(next);
+  };
   const [notes, setNotes] = useState([]),
     [tasks, setTasks] = useState([]),
     [connectors, setConnectors] = useState([]),
@@ -392,6 +403,20 @@ function App() {
       ),
     );
 
+  if (page === "cms")
+    content = h(CMSWorkspace, {
+      api,
+      post,
+      onDirtyChange: setCMSDirty,
+      streamRequest: (body, signal) =>
+        fetch("/api/cms/generate", {
+          method: "POST",
+          credentials: "include",
+          signal,
+          headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
+          body: JSON.stringify(body),
+        }),
+    });
   if (page === "business")
     content = h(BusinessWorkspace, {
       api,
@@ -965,6 +990,11 @@ function App() {
             disabled: chatBusy,
             onClick: async () => {
               try {
+                if (
+                  cmsDirty &&
+                  !window.confirm("Bản nội dung chưa lưu. Đăng xuất?")
+                )
+                  return;
                 await api("/session", { method: "DELETE" });
                 csrf = "";
                 setAuthenticated(false);
@@ -1035,7 +1065,7 @@ function App() {
       h(
         "footer",
         null,
-        "BDSG Foundation · MIT · v0.1",
+        "BDSG Foundation · MIT · v0.2",
         h("span", null, "RENT THE MODEL. OWN THE BRAIN."),
       ),
     ),

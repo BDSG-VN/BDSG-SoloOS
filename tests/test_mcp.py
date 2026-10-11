@@ -207,7 +207,11 @@ async def test_gateway_tool_calls_use_agent_and_wait_for_owner(system, monkeypat
         lambda **kwargs: original_client(**kwargs, transport=httpx.MockTransport(gateway)),
     )
     monkeypatch.setenv("BDSG_LLM_BASE_URL", "http://gateway.local/v1")
-    state = SimpleNamespace(brain=Brain(tmp_path / "brain"), store=store, hub=hub)
+    from server.core.cms import CMSStore
+
+    state = SimpleNamespace(
+        brain=Brain(tmp_path / "brain"), store=store, hub=hub, cms=CMSStore(tmp_path / "cms.db")
+    )
     body = SimpleNamespace(
         message="Save this",
         ui_prompt="Allowed library",

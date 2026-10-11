@@ -15,6 +15,7 @@ from server.api.security import COOKIE, mint_session, owner, principal, session_
 from server.config import ROOT, Settings
 from server.core.brain import Brain
 from server.core.business import BusinessStore
+from server.core.cms import CMSStore, ConflictError
 from server.core.mcp_hub import MCPHub
 from server.core.mcp_store import Connector, MCPStore, Permission, PolicyError
 from server.core.tasks import TaskQueue
@@ -80,6 +81,7 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
         app.state.brain = Brain(config.data_dir / "brains/default_brain")
         app.state.tasks = TaskQueue(config.data_dir / "system/tasks.db")
         app.state.business = BusinessStore(config.data_dir / "system/business.db", config.store_key)
+        app.state.cms = CMSStore(config.data_dir / "system/cms.db", config.store_key)
         if not any(c["id"] == "second-brain" for c in app.state.store.connectors()):
             app.state.store.put_connector(
                 Connector(
@@ -120,11 +122,31 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
                         }
                     },
                 )
+        for connector_id, permission, tools in (
+            ("cms-read", Permission.READ_ONLY, {"list_content": True}),
+            ("cms-write", Permission.REQUIRES_CONFIRMATION, {"save_content_draft": False}),
+        ):
+            if not any(c["id"] == connector_id for c in app.state.store.connectors()):
+                app.state.store.put_connector(
+                    Connector(
+                        id=connector_id,
+                        command=sys.executable,
+                        args=["-m", "server.plugins.cms_mcp"],
+                        permission=permission,
+                        tools=tools,
+                    ),
+                    {
+                        "env": {
+                            "BDSG_CMS_DB": str(config.data_dir / "system/cms.db"),
+                            "PYTHONPATH": str(ROOT),
+                        }
+                    },
+                )
         yield
 
     app = FastAPI(
         title="BDSG Solo-OS",
-        version="0.1.0",
+        version="0.2.0",
         lifespan=lifespan,
         docs_url=None,
         redoc_url=None,
@@ -176,6 +198,7 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
         )
         if request.url.path.startswith("/api/"):
             response.headers["Cache-Control"] = "no-store"
+            response.headers["X-Robots-Tag"] = "noindex, nofollow"
         if config.secure_cookies:
             response.headers["Strict-Transport-Security"] = "max-age=31536000"
         return response
@@ -184,13 +207,17 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
     async def policy_error(request, exc):
         return JSONResponse({"detail": str(exc)}, status_code=403)
 
+    @app.exception_handler(ConflictError)
+    async def conflict_error(request, exc):
+        return JSONResponse({"detail": str(exc)}, status_code=409)
+
     @app.exception_handler(ValueError)
     async def value_error(request, exc):
         return JSONResponse({"detail": "Invalid input or configuration"}, status_code=422)
 
     @app.get("/api/health")
     def health():
-        return {"status": "ok", "version": "0.1.0"}
+        return {"status": "ok", "version": "0.2.0"}
 
     @app.post("/api/session")
     def login(body: Login, request: Request, response: Response):
@@ -290,13 +317,13 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
         return request.app.state.tasks.move(task_id, body.state)
 
     @app.get("/api/engines", dependencies=[Depends(owner)])
-    def engines():
-        import os
+    def engines(request: Request):
+        gateway = request.app.state.cms.gateway()
 
         return {
             "providers": PROVIDERS,
-            "model": os.getenv("BDSG_LLM_MODEL", "solo-default"),
-            "configured": bool(os.getenv("BDSG_LLM_BASE_URL")),
+            "model": gateway["model"],
+            "configured": bool(gateway["base_url"]),
         }
 
     @app.get("/api/conversations/{conversation}", dependencies=[Depends(owner)])
@@ -326,6 +353,11 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
 
     app.include_router(business_router)
     app.include_router(webhooks)
+    from server.api.cms import public as cms_public
+    from server.api.cms import router as cms_router
+
+    app.include_router(cms_router)
+    app.include_router(cms_public)
     dist = ROOT / "dashboard/dist"
     if dist.exists():
         app.mount("/", StaticFiles(directory=dist, html=True), name="dashboard")
