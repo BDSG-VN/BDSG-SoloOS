@@ -80,10 +80,14 @@ test("isolated brain proposal requires review, revisions remain available, share
     shared.getByText("Bản chụp chỉ đọc.", { exact: false }),
   ).toBeVisible();
   await anon.close();
+  const revoked = page.waitForResponse((response) =>
+    response.request().method() === "DELETE" && response.url().includes("/api/shares/"),
+  );
   await page
     .getByRole("button", { name: "Thu hồi", exact: true })
     .first()
     .click();
+  expect((await revoked).ok()).toBeTruthy();
   expect((await page.request.get(url)).status()).toBe(404);
   await page
     .getByRole("button", { name: "Thư viện bộ nhớ", exact: true })
