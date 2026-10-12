@@ -182,6 +182,8 @@ def create_app(settings: Settings | None = None, hub_factory=MCPHub):
         redoc_url=None,
         openapi_url=None,
     )
+    from server.core.i18n import LocaleMiddleware
+    app.add_middleware(LocaleMiddleware)
     from server.api.members import router as members_router
 
     app.include_router(members_router)

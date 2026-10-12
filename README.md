@@ -20,9 +20,11 @@ Trang chủ công khai tách `/admin`, tài khoản khách tại `/account`, kh�
 
 Ứng dụng native iOS/macOS/Android đang phát triển, chưa phát hành store hoặc kiểm thử thiết bị thật. Bản Cloudflare Workers/D1 đầy đủ **chưa hoàn tất**; [phân tích và phần còn thiếu](docs/WEBSITE-AND-CLOUDFLARE.md). Không coi những mục này là tương đương toàn bộ WordPress hoặc các gói tham khảo.
 
+Giao diện hỗ trợ **Tiếng Việt / English**, chuyển ngôn ngữ tại màn hình đăng nhập hoặc thanh trên cùng. Lựa chọn được lưu trên trình duyệt, không mất nội dung đang nhập; bài viết và hội thoại giữ nguyên ngôn ngữ tác giả. Xem [hướng dẫn đa ngôn ngữ](docs/LANGUAGES.md).
+
 ## Có trong bản đầu tiên
 
-- Dashboard React tiếng Việt: tổng quan, AI Studio, bộ nhớ, Kanban, MCP, phê duyệt và các phân hệ doanh nghiệp.
+- Dashboard React tiếng Việt và tiếng Anh: tổng quan, AI Studio, bộ nhớ, Kanban, MCP, phê duyệt và các phân hệ doanh nghiệp.
 - FastAPI với đăng nhập cookie HttpOnly, CSRF gắn phiên, CORS allowlist, giới hạn
   tần suất, kiểm tra Host và các header bảo mật.
 - MCP thật qua `stdio` và Streamable HTTP, discovery có phân trang, kiểm tra JSON

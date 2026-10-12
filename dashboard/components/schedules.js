@@ -1,3 +1,4 @@
+import { t as uiText, localeTag } from "../i18n/runtime.js";
 import React, { useState } from "react";
 const h = React.createElement;
 function localInput(value) {
@@ -45,34 +46,34 @@ export default function Schedules({ data, api, post, onSaved }) {
     setTimes([]);
   }
   const display = (value, zone) =>
-    new Date(value * 1000).toLocaleString("vi-VN", {
+    new Date(value * 1000).toLocaleString(localeTag(), {
       timeZone: zone || "Asia/Ho_Chi_Minh",
     });
   return h(
     "section",
     { className: "schedule-editor" },
-    h("h3", null, "Lịch chạy"),
+    h("h3", null, uiText("Lịch chạy")),
     h(
       "p",
       { className: "muted" },
-      "Chạy một lần, theo khoảng thời gian hoặc lịch tuần/tháng. Lần bị bỏ lỡ không được chạy bù hàng loạt. Mỗi lượt vẫn tuân thủ quyền công cụ.",
+      uiText("Chạy một lần, theo khoảng thời gian hoặc lịch tuần/tháng. Lần bị bỏ lỡ không được chạy bù hàng loạt. Mỗi lượt vẫn tuân thủ quyền công cụ."),
     ),
     error && h("p", { role: "alert" }, error),
     h(
       "fieldset",
       { disabled: busy },
-      h("legend", null, id ? "Sửa lịch" : "Lịch mới"),
+      h("legend", null, id ? uiText("Sửa lịch") : uiText("Lịch mới")),
       h(
         "label",
         null,
-        "Quy trình của lịch",
+        uiText("Quy trình của lịch"),
         h(
           "select",
           {
             value: draft.workflow_id,
             onChange: (e) => update({ workflow_id: e.target.value }),
           },
-          h("option", { value: "" }, "Chọn quy trình"),
+          h("option", { value: "" }, uiText("Chọn quy trình")),
           ...(data?.workflows || []).map((w) =>
             h(
               "option",
@@ -85,23 +86,23 @@ export default function Schedules({ data, api, post, onSaved }) {
       h(
         "label",
         null,
-        "Kiểu lịch",
+        uiText("Kiểu lịch"),
         h(
           "select",
           {
             value: draft.kind,
             onChange: (e) => update({ kind: e.target.value }),
           },
-          h("option", { value: "interval" }, "Lặp theo phút"),
-          h("option", { value: "cron" }, "Lịch tuần / tháng"),
-          h("option", { value: "once" }, "Một lần"),
+          h("option", { value: "interval" }, uiText("Lặp theo phút")),
+          h("option", { value: "cron" }, uiText("Lịch tuần / tháng")),
+          h("option", { value: "once" }, uiText("Một lần")),
         ),
       ),
       draft.kind === "interval" &&
         h(
           "label",
           null,
-          "Khoảng cách (phút)",
+          uiText("Khoảng cách (phút)"),
           h("input", {
             type: "number",
             min: 15,
@@ -118,24 +119,24 @@ export default function Schedules({ data, api, post, onSaved }) {
           h(
             "label",
             null,
-            "Lịch mẫu",
+            uiText("Lịch mẫu"),
             h(
               "select",
               { value: "", onChange: (e) => update({ cron: e.target.value }) },
-              h("option", { value: "" }, "Chọn nhanh"),
+              h("option", { value: "" }, uiText("Chọn nhanh")),
               h(
                 "option",
                 { value: "0 9 * * 1-5" },
-                "9 giờ sáng các ngày làm việc",
+                uiText("9 giờ sáng các ngày làm việc"),
               ),
-              h("option", { value: "0 18 * * *" }, "18 giờ mỗi ngày"),
-              h("option", { value: "0 9 1 * *" }, "9 giờ ngày đầu tháng"),
+              h("option", { value: "0 18 * * *" }, uiText("18 giờ mỗi ngày")),
+              h("option", { value: "0 9 1 * *" }, uiText("9 giờ ngày đầu tháng")),
             ),
           ),
           h(
             "label",
             null,
-            "Biểu thức cron (5 trường)",
+            uiText("Biểu thức cron (5 trường)"),
             h("input", {
               value: draft.cron,
               onChange: (e) => update({ cron: e.target.value }),
@@ -144,7 +145,7 @@ export default function Schedules({ data, api, post, onSaved }) {
           h(
             "label",
             null,
-            "Múi giờ",
+            uiText("Múi giờ"),
             h("input", {
               value: draft.timezone,
               onChange: (e) => update({ timezone: e.target.value }),
@@ -156,7 +157,7 @@ export default function Schedules({ data, api, post, onSaved }) {
         h(
           "label",
           null,
-          "Thời điểm — theo giờ trên thiết bị này",
+          uiText("Thời điểm — theo giờ trên thiết bị này"),
           h("input", {
             type: "datetime-local",
             value: localInput(draft.at),
@@ -177,7 +178,7 @@ export default function Schedules({ data, api, post, onSaved }) {
           checked: draft.skip_overlap,
           onChange: (e) => update({ skip_overlap: e.target.checked }),
         }),
-        " Bỏ qua lần mới nếu quy trình còn đang chạy hoặc chờ duyệt",
+        uiText(" Bỏ qua lần mới nếu quy trình còn đang chạy hoặc chờ duyệt"),
       ),
       h(
         "label",
@@ -187,7 +188,7 @@ export default function Schedules({ data, api, post, onSaved }) {
           checked: draft.enabled,
           onChange: (e) => update({ enabled: e.target.checked }),
         }),
-        " Bật lịch này; các lượt có thể dùng hạn mức AI và công cụ đã cấp quyền",
+        uiText(" Bật lịch này; các lượt có thể dùng hạn mức AI và công cụ đã cấp quyền"),
       ),
       h(
         "div",
@@ -203,7 +204,7 @@ export default function Schedules({ data, api, post, onSaved }) {
                 ),
               ),
           },
-          "Xem trước lần chạy",
+          uiText("Xem trước lần chạy"),
         ),
         h(
           "button",
@@ -222,7 +223,7 @@ export default function Schedules({ data, api, post, onSaved }) {
                 await onSaved();
               }),
           },
-          "Lưu lịch",
+          uiText("Lưu lịch"),
         ),
         id &&
           h(
@@ -234,14 +235,14 @@ export default function Schedules({ data, api, post, onSaved }) {
                 setTimes([]);
               },
             },
-            "Lịch mới",
+            uiText("Lịch mới"),
           ),
       ),
     ),
     times.length > 0 &&
       h(
         "ol",
-        { "aria-label": "Các lần chạy dự kiến" },
+        { "aria-label": uiText("Các lần chạy dự kiến") },
         ...times.map((t) =>
           h(
             "li",
@@ -266,17 +267,17 @@ export default function Schedules({ data, api, post, onSaved }) {
           (s.kind === "cron"
             ? s.cron
             : s.kind === "once"
-              ? "Một lần"
-              : `${s.interval_minutes} phút`) +
+              ? uiText("Một lần")
+              : uiText("{0} phút", [s.interval_minutes])) +
             " · " +
-            (s.enabled ? "Đang bật" : "Tạm dừng"),
+            (s.enabled ? uiText("Đang bật") : uiText("Tạm dừng")),
         ),
         s.enabled &&
-          h("small", null, "Tiếp theo: " + display(s.next_run, s.timezone)),
+          h("small", null, uiText("Tiếp theo: ") + display(s.next_run, s.timezone)),
         h(
           "div",
           { className: "button-row" },
-          h("button", { disabled: busy, onClick: () => edit(s) }, "Sửa lịch"),
+          h("button", { disabled: busy, onClick: () => edit(s) }, uiText("Sửa lịch")),
           h(
             "button",
             {
@@ -292,7 +293,7 @@ export default function Schedules({ data, api, post, onSaved }) {
                   await onSaved();
                 }),
             },
-            s.enabled ? "Tạm dừng" : "Bật lại",
+            s.enabled ? uiText("Tạm dừng") : uiText("Bật lại"),
           ),
           h(
             "button",
@@ -301,7 +302,7 @@ export default function Schedules({ data, api, post, onSaved }) {
               onClick: () => {
                 if (
                   window.confirm(
-                    "Xóa lịch này? Các lượt chạy trước vẫn được giữ.",
+                    uiText("Xóa lịch này? Các lượt chạy trước vẫn được giữ."),
                   )
                 )
                   run(async () => {
@@ -312,7 +313,7 @@ export default function Schedules({ data, api, post, onSaved }) {
                   });
               },
             },
-            "Xóa lịch",
+            uiText("Xóa lịch"),
           ),
         ),
       ),

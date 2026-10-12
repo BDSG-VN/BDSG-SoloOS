@@ -1,3 +1,4 @@
+import { t as uiText, localeTag } from "../i18n/runtime.js";
 import React, { useEffect, useRef, useState } from "react";
 const h = React.createElement;
 const groups = [
@@ -32,16 +33,16 @@ export default function Navigation({
   }, [onReveal]);
   return h(
     "nav",
-    { "aria-label": "Điều hướng chính" },
+    { "aria-label": uiText("Điều hướng chính") },
     h(
       "label",
       { className: "nav-search" },
-      h("span", null, "Tìm chức năng"),
+      h("span", null, uiText("Tìm chức năng")),
       h("input", {
         ref: input,
         type: "search",
         value: query,
-        placeholder: "Tìm nhanh · ⌘ K",
+        placeholder: uiText("Tìm nhanh · ⌘ K"),
         onChange: (e) => setQuery(e.target.value),
       }),
     ),
@@ -81,6 +82,6 @@ export default function Navigation({
       !Object.values(labels).some((v) =>
         v.toLowerCase().includes(query.toLowerCase()),
       ) &&
-      h("p", { role: "status" }, "Không tìm thấy chức năng."),
+      h("p", { role: "status" }, uiText("Không tìm thấy chức năng.")),
   );
 }

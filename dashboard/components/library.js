@@ -1,3 +1,4 @@
+import { t as uiText, localeTag } from "../i18n/runtime.js";
 import React, { useEffect, useRef, useState } from "react";
 const h = React.createElement;
 export default function Library({ api, post, onDirtyChange }) {
@@ -52,7 +53,7 @@ export default function Library({ api, post, onDirtyChange }) {
   function mayDiscard() {
     return (
       !dirtyRef.current ||
-      window.confirm("Bản đề xuất chưa lưu. Bỏ thay đổi đang sửa?")
+      window.confirm(uiText("Bản đề xuất chưa lưu. Bỏ thay đổi đang sửa?"))
     );
   }
   function changeBrain(next) {
@@ -115,18 +116,18 @@ export default function Library({ api, post, onDirtyChange }) {
   return h(
     "section",
     { className: "panel workspace-panel", style: { padding: 24 } },
-    h("h2", null, "Thư viện bộ nhớ"),
+    h("h2", null, uiText("Thư viện bộ nhớ")),
     h(
       "p",
       null,
-      "Mỗi bộ nhớ có tài liệu và kết nối MCP riêng. Chọn bộ nhớ khi tạo cuộc trò chuyện. Mọi đề xuất dưới đây cần bạn duyệt; nếu tài liệu đã đổi, đề xuất cũ bị từ chối.",
+      uiText("Mỗi bộ nhớ có tài liệu và kết nối MCP riêng. Chọn bộ nhớ khi tạo cuộc trò chuyện. Mọi đề xuất dưới đây cần bạn duyệt; nếu tài liệu đã đổi, đề xuất cũ bị từ chối."),
     ),
     error && h("p", { role: "alert" }, error),
     notice && h("p", { role: "status" }, notice),
     h(
       "label",
       null,
-      "Bộ nhớ",
+      uiText("Bộ nhớ"),
       h(
         "select",
         { value: brain, onChange: (e) => changeBrain(e.target.value) },
@@ -136,12 +137,12 @@ export default function Library({ api, post, onDirtyChange }) {
     h(
       "a",
       { href: `/api/library/${brain}/export`, download: true },
-      "Xuất tài liệu Markdown (.zip)",
+      uiText("Xuất tài liệu Markdown (.zip)"),
     ),
     h(
       "label",
       null,
-      "Tên bộ nhớ mới",
+      uiText("Tên bộ nhớ mới"),
       h("input", { value: title, onChange: (e) => setTitle(e.target.value) }),
     ),
     h(
@@ -155,16 +156,16 @@ export default function Library({ api, post, onDirtyChange }) {
             setTitle("");
           }),
       },
-      "Tạo bộ nhớ",
+      uiText("Tạo bộ nhớ"),
     ),
-    h("h3", null, "Tài liệu"),
+    h("h3", null, uiText("Tài liệu")),
     ...notes.map((n) =>
       h("button", { key: n.path, onClick: () => select(n) }, n.path),
     ),
     h(
       "label",
       null,
-      "Đường dẫn Markdown",
+      uiText("Đường dẫn Markdown"),
       h("input", {
         value: path,
         onChange: (e) => {
@@ -176,7 +177,7 @@ export default function Library({ api, post, onDirtyChange }) {
     h(
       "label",
       null,
-      "Nội dung đề xuất",
+      uiText("Nội dung đề xuất"),
       h("textarea", {
         value: content,
         rows: 10,
@@ -186,12 +187,12 @@ export default function Library({ api, post, onDirtyChange }) {
     h("input", {
       type: "file",
       accept: ".md,.txt,text/plain,text/markdown",
-      "aria-label": "Nhập tài liệu văn bản",
+      "aria-label": uiText("Nhập tài liệu văn bản"),
       onChange: async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
         if (file.size > 100000) {
-          setError("Tài liệu tối đa 100 KB.");
+          setError(uiText("Tài liệu tối đa 100 KB."));
           return;
         }
         if (!mayDiscard()) return;
@@ -216,10 +217,10 @@ export default function Library({ api, post, onDirtyChange }) {
             await post(`/library/${brain}/proposals`, { path, content });
             if (currentBrain.current === brain && currentPath.current === path)
               setBaseline({ path, content });
-            setNotice("Đã tạo đề xuất. Xem và duyệt bên dưới.");
+            setNotice(uiText("Đã tạo đề xuất. Xem và duyệt bên dưới."));
           }),
       },
-      "Đề xuất lưu tài liệu",
+      uiText("Đề xuất lưu tài liệu"),
     ),
     h(
       "button",
@@ -237,7 +238,7 @@ export default function Library({ api, post, onDirtyChange }) {
               setRevisions(rows);
           }),
       },
-      "Lịch sử tài liệu",
+      uiText("Lịch sử tài liệu"),
     ),
     ...revisions.map((r) =>
       h(
@@ -252,19 +253,19 @@ export default function Library({ api, post, onDirtyChange }) {
               if (!mayDiscard()) return;
               setContent(r.content);
               setNotice(
-                "Đã đưa nội dung cũ vào ô đề xuất; chưa thay tài liệu đang lưu.",
+                uiText("Đã đưa nội dung cũ vào ô đề xuất; chưa thay tài liệu đang lưu."),
               );
             },
           },
-          "Dùng bản này để đề xuất khôi phục",
+          uiText("Dùng bản này để đề xuất khôi phục"),
         ),
       ),
     ),
-    h("h3", null, "Học từ cuộc trò chuyện"),
+    h("h3", null, uiText("Học từ cuộc trò chuyện")),
     h(
       "select",
       {
-        "aria-label": "Cuộc trò chuyện để học",
+        "aria-label": uiText("Cuộc trò chuyện để học"),
         value: conversation,
         onChange: (e) => setConversation(e.target.value),
       },
@@ -279,15 +280,15 @@ export default function Library({ api, post, onDirtyChange }) {
             setLearning(true);
             try {
               await post(`/library/${brain}/learn`, { conversation, path });
-              setNotice("AI đã tạo đề xuất; hãy đọc và duyệt bên dưới.");
+              setNotice(uiText("AI đã tạo đề xuất; hãy đọc và duyệt bên dưới."));
             } finally {
               setLearning(false);
             }
           }),
       },
-      learning ? "Đang rút ra đề xuất…" : "AI đề xuất ký ức",
+      learning ? uiText("Đang rút ra đề xuất…") : uiText("AI đề xuất ký ức"),
     ),
-    h("h3", null, "Chờ duyệt"),
+    h("h3", null, uiText("Chờ duyệt")),
     ...proposals.map((p) =>
       h(
         "details",
@@ -306,7 +307,7 @@ export default function Library({ api, post, onDirtyChange }) {
                 post(`/library/proposals/${p.id}/decision`, { approved: true }),
               ),
           },
-          "Duyệt và ghi vào bộ nhớ",
+          uiText("Duyệt và ghi vào bộ nhớ"),
         ),
         h(
           "button",
@@ -318,7 +319,7 @@ export default function Library({ api, post, onDirtyChange }) {
                 }),
               ),
           },
-          "Từ chối",
+          uiText("Từ chối"),
         ),
       ),
     ),

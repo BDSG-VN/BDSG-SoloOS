@@ -1,22 +1,23 @@
+import { t as uiText, localeTag } from "../i18n/runtime.js";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { readSSE } from "./stream.js";
 import "./cms.css";
 import SiteSettings from "./site_settings.js";
 const h = React.createElement;
 const TYPES = {
-  hero: "Mở đầu",
-  heading: "Tiêu đề",
-  paragraph: "Đoạn văn",
-  list: "Danh sách",
-  quote: "Trích dẫn",
-  button: "Nút liên kết",
-  image: "Hình ảnh",
-  divider: "Đường phân cách",
+  get hero() { return uiText("Mở đầu"); },
+  get heading() { return uiText("Tiêu đề"); },
+  get paragraph() { return uiText("Đoạn văn"); },
+  get list() { return uiText("Danh sách"); },
+  get quote() { return uiText("Trích dẫn"); },
+  get button() { return uiText("Nút liên kết"); },
+  get image() { return uiText("Hình ảnh"); },
+  get divider() { return uiText("Đường phân cách"); },
 };
 const STATUS = {
-  draft: "Bản nháp",
-  published: "Đã xuất bản",
-  trash: "Thùng rác",
+  get draft() { return uiText("Bản nháp"); },
+  get published() { return uiText("Đã xuất bản"); },
+  get trash() { return uiText("Thùng rác"); },
 };
 const blank = (kind) => ({
   kind,
@@ -45,7 +46,7 @@ export function DraftPreview({ doc }) {
   return h(
     "article",
     { className: "cms-preview" },
-    h("h1", null, doc.title || "Tiêu đề"),
+    h("h1", null, doc.title || uiText("Tiêu đề")),
     ...doc.blocks.map((b, i) => {
       const props = { key: i };
       if (b.type === "hero")
@@ -162,7 +163,7 @@ export default function CMSWorkspace({
     setPreview(false);
   };
   const mayLeave = () =>
-    !dirty || window.confirm("Bản đang sửa chưa lưu. Bỏ các thay đổi này?");
+    !dirty || window.confirm(uiText("Bản đang sửa chưa lưu. Bỏ các thay đổi này?"));
   const update = (key, value) => setDoc((d) => ({ ...d, [key]: value }));
   const updateBlock = (i, changes) =>
     update(
@@ -197,17 +198,17 @@ export default function CMSWorkspace({
       : await post("/cms/content", payload(doc));
     select(result);
     await load();
-    setNotice("Đã lưu bản nháp. Nội dung công khai chỉ cập nhật khi xuất bản.");
+    setNotice(uiText("Đã lưu bản nháp. Nội dung công khai chỉ cập nhật khi xuất bản."));
     return result;
   };
   const transition = async (action) => {
-    if (dirty) throw new Error("Lưu bản nháp trước khi thay đổi trạng thái.");
+    if (dirty) throw new Error(uiText("Lưu bản nháp trước khi thay đổi trạng thái."));
     if (
       (action === "publish" || action === "trash") &&
       !window.confirm(
         action === "publish"
-          ? "Xuất bản phiên bản đã lưu để mọi người có thể xem?"
-          : "Chuyển vào thùng rác và gỡ khỏi trang công khai?",
+          ? uiText("Xuất bản phiên bản đã lưu để mọi người có thể xem?")
+          : uiText("Chuyển vào thùng rác và gỡ khỏi trang công khai?"),
       )
     )
       return;
@@ -219,17 +220,17 @@ export default function CMSWorkspace({
     );
     await load();
     setNotice(
-      action === "publish" ? "Đã xuất bản." : "Đã cập nhật trạng thái.",
+      action === "publish" ? uiText("Đã xuất bản.") : uiText("Đã cập nhật trạng thái."),
     );
   };
   const generate = async () => {
-    if (!instruction.trim()) throw new Error("Nhập yêu cầu cho AI.");
+    if (!instruction.trim()) throw new Error(uiText("Nhập yêu cầu cho AI."));
     if (
       (doc.id && dirty) ||
       (!doc.id &&
         JSON.stringify(payload(doc)) !== JSON.stringify(blank(doc.kind)))
     )
-      throw new Error("Lưu nội dung đang sửa trước khi yêu cầu AI chỉnh tiếp.");
+      throw new Error(uiText("Lưu nội dung đang sửa trước khi yêu cầu AI chỉnh tiếp."));
     controller.current = new AbortController();
     setTokens(0);
     const response = await streamRequest(
@@ -244,7 +245,7 @@ export default function CMSWorkspace({
     );
     if (!response.ok)
       throw new Error(
-        "Không thể bắt đầu tạo bản thảo. Kiểm tra phiên đăng nhập và yêu cầu.",
+        uiText("Không thể bắt đầu tạo bản thảo. Kiểm tra phiên đăng nhập và yêu cầu."),
       );
     let proposal = null,
       done = false;
@@ -255,11 +256,11 @@ export default function CMSWorkspace({
       if (event.type === "done") done = true;
     }
     if (!proposal || !done)
-      throw new Error("Luồng AI chưa hoàn tất. Bản đang sửa được giữ nguyên.");
+      throw new Error(uiText("Luồng AI chưa hoàn tất. Bản đang sửa được giữ nguyên."));
     setDoc((d) => ({ ...d, ...proposal }));
     setPreview(true);
     setNotice(
-      "AI đã tạo đề xuất. Kiểm tra thông tin và nguồn, chỉnh sửa rồi lưu bản nháp.",
+      uiText("AI đã tạo đề xuất. Kiểm tra thông tin và nguồn, chỉnh sửa rồi lưu bản nháp."),
     );
   };
   const upload = async (file) => {
@@ -304,15 +305,15 @@ export default function CMSWorkspace({
       h(
         "div",
         null,
-        h("span", { className: "eyebrow" }, "NỘI DUNG & WEBSITE"),
-        h("h2", null, "Từ ý tưởng đến trang công khai"),
+        h("span", { className: "eyebrow" }, uiText("NỘI DUNG & WEBSITE")),
+        h("h2", null, uiText("Từ ý tưởng đến trang công khai")),
         h(
           "p",
           null,
-          "Viết tin, tạo trang bằng AI và duyệt từng phiên bản trước khi xuất bản.",
+          uiText("Viết tin, tạo trang bằng AI và duyệt từng phiên bản trước khi xuất bản."),
         ),
       ),
-      btn("Cấu hình AI", () =>
+      btn(uiText("Cấu hình AI"), () =>
         setGateway({ ...settings?.gateway, api_key: "" }),
       ),
     ),
@@ -337,13 +338,13 @@ export default function CMSWorkspace({
               );
               setGateway(null);
               await load();
-              setNotice("Đã lưu cổng AI cho CMS và AI Studio.");
+              setNotice(uiText("Đã lưu cổng AI cho CMS và AI Studio."));
             });
           },
         },
-        h("h3", null, "Cổng AI tương thích OpenAI"),
+        h("h3", null, uiText("Cổng AI tương thích OpenAI")),
         field(
-          "Base URL (gồm /v1 nếu cổng yêu cầu)",
+          uiText("Base URL (gồm /v1 nếu cổng yêu cầu)"),
           gateway.base_url,
           (v) => setGateway((g) => ({ ...g, base_url: v })),
           false,
@@ -358,7 +359,7 @@ export default function CMSWorkspace({
         ),
         field(
           gateway.has_api_key
-            ? "API key mới (để trống giữ khóa cùng máy chủ)"
+            ? uiText("API key mới (để trống giữ khóa cùng máy chủ)")
             : "API key",
           gateway.api_key,
           (v) => setGateway((g) => ({ ...g, api_key: v })),
@@ -368,10 +369,10 @@ export default function CMSWorkspace({
         h(
           "p",
           null,
-          "Khóa được mã hóa trên máy chủ. Khi đổi máy chủ, hãy nhập lại khóa. Yêu cầu AI gửi nội dung và tài liệu tham khảo tới cổng này.",
+          uiText("Khóa được mã hóa trên máy chủ. Khi đổi máy chủ, hãy nhập lại khóa. Yêu cầu AI gửi nội dung và tài liệu tham khảo tới cổng này."),
         ),
-        h("button", { disabled: busy }, "Lưu cổng AI"),
-        btn("Đóng", () => setGateway(null)),
+        h("button", { disabled: busy }, uiText("Lưu cổng AI")),
+        btn(uiText("Đóng"), () => setGateway(null)),
       ),
     h(
       "div",
@@ -384,7 +385,7 @@ export default function CMSWorkspace({
           { className: "cms-toolbar" },
           ...["post", "page"].map((k) =>
             btn(
-              k === "post" ? "Bài viết" : "Trang",
+              k === "post" ? uiText("Bài viết") : "Trang",
               () => {
                 if (mayLeave()) {
                   setKind(k);
@@ -396,21 +397,21 @@ export default function CMSWorkspace({
           ),
         ),
         btn(
-          kind === "post" ? "+ Bài viết mới" : "+ Trang mới",
+          kind === "post" ? uiText("+ Bài viết mới") : uiText("+ Trang mới"),
           () => {
             if (mayLeave()) select(blank(kind));
           },
           { className: "primary" },
         ),
-        field("Tìm nội dung", search, setSearch),
+        field(uiText("Tìm nội dung"), search, setSearch),
         h(
           "select",
           {
-            "aria-label": "Lọc trạng thái",
+            "aria-label": uiText("Lọc trạng thái"),
             value: status,
             onChange: (e) => setStatus(e.target.value),
           },
-          h("option", { value: "" }, "Đang sử dụng"),
+          h("option", { value: "" }, uiText("Đang sử dụng")),
           ...Object.entries(STATUS).map(([key, title]) =>
             h("option", { key, value: key }, title),
           ),
@@ -435,18 +436,18 @@ export default function CMSWorkspace({
                 "small",
                 null,
                 STATUS[r.status],
-                r.has_unpublished_changes ? " · Có bản sửa" : "",
-                settings?.homepage_id === r.id ? " · Trang chủ" : "",
+                r.has_unpublished_changes ? uiText(" · Có bản sửa") : "",
+                settings?.homepage_id === r.id ? uiText(" · Trang chủ") : "",
               ),
             ),
           ),
           !filtered.length &&
-            h("p", null, "Chưa có nội dung. Tạo bản nháp đầu tiên ở trên."),
+            h("p", null, uiText("Chưa có nội dung. Tạo bản nháp đầu tiên ở trên.")),
         ),
         h(
           "a",
           { href: "/news", target: "_blank", rel: "noreferrer" },
-          "Xem trang tin tức ↗",
+          uiText("Xem trang tin tức ↗"),
         ),
       ),
       doc
@@ -459,24 +460,24 @@ export default function CMSWorkspace({
               h(
                 "strong",
                 null,
-                doc.kind === "post" ? "Biên tập bài viết" : "Thiết kế trang",
+                doc.kind === "post" ? uiText("Biên tập bài viết") : uiText("Thiết kế trang"),
               ),
               h(
                 "small",
                 null,
                 dirty
-                  ? "Chưa lưu"
-                  : `${STATUS[doc.status] || "Bản nháp"} · v${doc.version || 1}`,
+                  ? uiText("Chưa lưu")
+                  : `${STATUS[doc.status] || uiText("Bản nháp")} · v${doc.version || 1}`,
               ),
             ),
             h(
               "fieldset",
               { disabled: busy || doc.status === "trash" },
-              field("Tiêu đề", doc.title, (v) => update("title", v), false, {
+              field(uiText("Tiêu đề"), doc.title, (v) => update("title", v), false, {
                 maxLength: 250,
               }),
               field(
-                "Đường dẫn (để trống để tạo từ tiêu đề)",
+                uiText("Đường dẫn (để trống để tạo từ tiêu đề)"),
                 doc.slug,
                 (v) => update("slug", v),
                 false,
@@ -485,39 +486,39 @@ export default function CMSWorkspace({
                   placeholder: "gioi-thieu",
                 },
               ),
-              field("Tóm tắt", doc.excerpt, (v) => update("excerpt", v), true, {
+              field(uiText("Tóm tắt"), doc.excerpt, (v) => update("excerpt", v), true, {
                 rows: 2,
               }),
               h(
                 "details",
                 { className: "cms-ai", open: true },
-                h("summary", null, "✦ Trợ lý viết & tạo trang AI"),
+                h("summary", null, uiText("✦ Trợ lý viết & tạo trang AI")),
                 h(
                   "p",
                   null,
                   settings?.gateway.configured
                     ? `Model: ${settings.gateway.model}`
-                    : "Chưa kết nối AI. Mở Cấu hình AI để nhập cổng và khóa API.",
+                    : uiText("Chưa kết nối AI. Mở Cấu hình AI để nhập cổng và khóa API."),
                 ),
-                field("Lệnh cho AI", instruction, setInstruction, true, {
+                field(uiText("Lệnh cho AI"), instruction, setInstruction, true, {
                   placeholder:
                     doc.kind === "page"
-                      ? "Tạo trang chủ gồm lời giới thiệu, dịch vụ, quy trình 4 bước và nút xem tin tức…"
-                      : "Viết bài tin tức từ tài liệu bên dưới, giọng rõ ràng, có tiêu đề và tóm tắt…",
+                      ? uiText("Tạo trang chủ gồm lời giới thiệu, dịch vụ, quy trình 4 bước và nút xem tin tức…")
+                      : uiText("Viết bài tin tức từ tài liệu bên dưới, giọng rõ ràng, có tiêu đề và tóm tắt…"),
                   rows: 3,
                 }),
                 field(
-                  "Tài liệu và dữ kiện tham khảo",
+                  uiText("Tài liệu và dữ kiện tham khảo"),
                   references,
                   setReferences,
                   true,
                   {
                     rows: 4,
                     placeholder:
-                      "Dán thông tin đã xác minh. AI không tự đọc các URL nguồn.",
+                      uiText("Dán thông tin đã xác minh. AI không tự đọc các URL nguồn."),
                   },
                 ),
-                btn("Tạo đề xuất bằng AI", generate, {
+                btn(uiText("Tạo đề xuất bằng AI"), generate, {
                   disabled: busy || !settings?.gateway.configured,
                 }),
                 tokens > 0 &&
@@ -525,15 +526,15 @@ export default function CMSWorkspace({
                     "small",
                     { role: "status" },
                     busy
-                      ? ` Đang nhận bản thảo… ${tokens.toLocaleString()} ký tự`
-                      : ` Đã nhận ${tokens.toLocaleString()} ký tự`,
+                      ? uiText(" Đang nhận bản thảo… {0} ký tự", [tokens.toLocaleString()])
+                      : uiText(" Đã nhận {0} ký tự", [tokens.toLocaleString()]),
                   ),
               ),
               h(
                 "div",
                 { className: "cms-toolbar" },
-                h("h3", null, "Các khối nội dung"),
-                btn(preview ? "Sửa khối" : "Xem bố cục", () =>
+                h("h3", null, uiText("Các khối nội dung")),
+                btn(preview ? uiText("Sửa khối") : uiText("Xem bố cục"), () =>
                   setPreview(!preview),
                 ),
               ),
@@ -562,7 +563,7 @@ export default function CMSWorkspace({
                             },
                             {
                               disabled: busy || i === 0,
-                              "aria-label": `Di chuyển khối ${i + 1} lên`,
+                              "aria-label": uiText("Di chuyển khối {0} lên", [i + 1]),
                             },
                           ),
                           btn(
@@ -577,22 +578,22 @@ export default function CMSWorkspace({
                             },
                             {
                               disabled: busy || i === doc.blocks.length - 1,
-                              "aria-label": `Di chuyển khối ${i + 1} xuống`,
+                              "aria-label": uiText("Di chuyển khối {0} xuống", [i + 1]),
                             },
                           ),
                           btn(
-                            "Xóa",
+                            uiText("Xóa"),
                             () =>
                               update(
                                 "blocks",
                                 doc.blocks.filter((_, n) => n !== i),
                               ),
-                            { "aria-label": `Xóa khối ${i + 1}` },
+                            { "aria-label": uiText("Xóa khối {0}", [i + 1]) },
                           ),
                         ),
                         !["divider", "list"].includes(b.type) &&
                           field(
-                            `Nội dung khối ${i + 1}`,
+                            uiText("Nội dung khối {0}", [i + 1]),
                             b.text,
                             (v) => updateBlock(i, { text: v }),
                             true,
@@ -600,21 +601,21 @@ export default function CMSWorkspace({
                           ),
                         b.type === "hero" &&
                           field(
-                            "Mô tả mở đầu",
+                            uiText("Mô tả mở đầu"),
                             b.detail,
                             (v) => updateBlock(i, { detail: v }),
                             true,
                           ),
                         b.type === "list" &&
                           field(
-                            "Mỗi mục một dòng",
+                            uiText("Mỗi mục một dòng"),
                             (b.items || []).join("\n"),
                             (v) => updateBlock(i, { items: v.split("\n") }),
                             true,
                           ),
                         b.type === "button" &&
                           field(
-                            "Liên kết HTTPS hoặc đường dẫn /",
+                            uiText("Liên kết HTTPS hoặc đường dẫn /"),
                             b.href,
                             (v) => updateBlock(i, { href: v }),
                           ),
@@ -625,12 +626,12 @@ export default function CMSWorkspace({
                             h(
                               "select",
                               {
-                                "aria-label": "Chọn ảnh",
+                                "aria-label": uiText("Chọn ảnh"),
                                 value: b.src,
                                 onChange: (e) =>
                                   updateBlock(i, { src: e.target.value }),
                               },
-                              h("option", { value: "" }, "Chọn từ thư viện"),
+                              h("option", { value: "" }, uiText("Chọn từ thư viện")),
                               ...media.map((m) =>
                                 h(
                                   "option",
@@ -642,7 +643,7 @@ export default function CMSWorkspace({
                                 ),
                               ),
                             ),
-                            field("Mô tả ảnh cho người đọc", b.alt, (v) =>
+                            field(uiText("Mô tả ảnh cho người đọc"), b.alt, (v) =>
                               updateBlock(i, { alt: v }),
                             ),
                           ),
@@ -655,7 +656,7 @@ export default function CMSWorkspace({
                 h(
                   "select",
                   {
-                    "aria-label": "Thêm khối",
+                    "aria-label": uiText("Thêm khối"),
                     value: "",
                     onChange: (e) => {
                       if (e.target.value) {
@@ -673,7 +674,7 @@ export default function CMSWorkspace({
                       }
                     },
                   },
-                  h("option", { value: "" }, "+ Thêm khối"),
+                  h("option", { value: "" }, uiText("+ Thêm khối")),
                   ...Object.entries(TYPES).map(([key, name]) =>
                     h("option", { key, value: key }, name),
                   ),
@@ -681,7 +682,7 @@ export default function CMSWorkspace({
                 h(
                   "label",
                   { className: "cms-upload" },
-                  "Tải ảnh (tối đa 5 MB)",
+                  uiText("Tải ảnh (tối đa 5 MB)"),
                   h("input", {
                     type: "file",
                     accept: "image/jpeg,image/png,image/webp",
@@ -696,30 +697,30 @@ export default function CMSWorkspace({
               h(
                 "details",
                 null,
-                h("summary", null, "Phân loại, nguồn & SEO"),
+                h("summary", null, uiText("Phân loại, nguồn & SEO")),
                 field(
-                  "Chuyên mục (mỗi dòng một mục)",
+                  uiText("Chuyên mục (mỗi dòng một mục)"),
                   doc.categories.join("\n"),
                   (v) => update("categories", v.split("\n")),
                   true,
                 ),
                 field(
-                  "Thẻ (mỗi dòng một thẻ)",
+                  uiText("Thẻ (mỗi dòng một thẻ)"),
                   doc.tags.join("\n"),
                   (v) => update("tags", v.split("\n")),
                   true,
                 ),
                 field(
-                  "Nguồn HTTPS (mỗi dòng một URL)",
+                  uiText("Nguồn HTTPS (mỗi dòng một URL)"),
                   doc.sources.join("\n"),
                   (v) => update("sources", v.split("\n")),
                   true,
                 ),
-                field("Tiêu đề SEO", doc.seo_title, (v) =>
+                field(uiText("Tiêu đề SEO"), doc.seo_title, (v) =>
                   update("seo_title", v),
                 ),
                 field(
-                  "Mô tả SEO",
+                  uiText("Mô tả SEO"),
                   doc.seo_description,
                   (v) => update("seo_description", v),
                   true,
@@ -728,10 +729,10 @@ export default function CMSWorkspace({
               h(
                 "div",
                 { className: "cms-toolbar cms-actions" },
-                btn("Lưu bản nháp", save, { className: "primary" }),
+                btn(uiText("Lưu bản nháp"), save, { className: "primary" }),
                 doc.id &&
                   btn(
-                    "Xuất bản phiên bản đã lưu",
+                    uiText("Xuất bản phiên bản đã lưu"),
                     () => transition("publish"),
                     { disabled: busy || dirty },
                   ),
@@ -743,7 +744,7 @@ export default function CMSWorkspace({
                       target: "_blank",
                       rel: "noreferrer",
                     },
-                    "Xem bản đã lưu ↗",
+                    uiText("Xem bản đã lưu ↗"),
                   ),
               ),
             ),
@@ -759,16 +760,16 @@ export default function CMSWorkspace({
                       target: "_blank",
                       rel: "noreferrer",
                     },
-                    "Mở trang công khai ↗",
+                    uiText("Mở trang công khai ↗"),
                   ),
                 doc.status === "published" &&
-                  btn("Gỡ xuất bản", () => transition("unpublish")),
+                  btn(uiText("Gỡ xuất bản"), () => transition("unpublish")),
                 doc.status === "published" &&
                   doc.kind === "page" &&
                   btn(
                     settings?.homepage_id === doc.id
-                      ? "Bỏ làm trang chủ"
-                      : "Đặt làm trang chủ",
+                      ? uiText("Bỏ làm trang chủ")
+                      : uiText("Đặt làm trang chủ"),
                     async () => {
                       await post(
                         "/cms/homepage",
@@ -779,20 +780,20 @@ export default function CMSWorkspace({
                         "PUT",
                       );
                       await load();
-                      setNotice("Đã cập nhật trang chủ công khai.");
+                      setNotice(uiText("Đã cập nhật trang chủ công khai."));
                     },
                   ),
                 btn(
                   doc.status === "trash"
-                    ? "Khôi phục bản nháp"
-                    : "Chuyển vào thùng rác",
+                    ? uiText("Khôi phục bản nháp")
+                    : uiText("Chuyển vào thùng rác"),
                   () =>
                     transition(doc.status === "trash" ? "restore" : "trash"),
                 ),
-                btn("Lịch sử phiên bản", async () =>
+                btn(uiText("Lịch sử phiên bản"), async () =>
                   setRevisions(await api(`/cms/content/${doc.id}/revisions`)),
                 ),
-                btn("Tải lại bản đã lưu", async () => {
+                btn(uiText("Tải lại bản đã lưu"), async () => {
                   if (mayLeave()) select(await api(`/cms/content/${doc.id}`));
                 }),
               ),
@@ -800,7 +801,7 @@ export default function CMSWorkspace({
               h(
                 "div",
                 { className: "cms-revisions" },
-                h("h3", null, "Khôi phục chỉ thay bản nháp"),
+                h("h3", null, uiText("Khôi phục chỉ thay bản nháp")),
                 ...revisions.map((r) =>
                   h(
                     "div",
@@ -808,14 +809,14 @@ export default function CMSWorkspace({
                     h(
                       "span",
                       null,
-                      `v${r.version} · ${new Date(r.created * 1000).toLocaleString("vi-VN")} · ${r.action}`,
+                      `v${r.version} · ${new Date(r.created * 1000).toLocaleString(localeTag())} · ${r.action}`,
                     ),
                     btn(
-                      "Khôi phục",
+                      uiText("Khôi phục"),
                       async () => {
                         if (dirty)
                           throw new Error(
-                            "Lưu hoặc tải lại bản đang sửa trước khi khôi phục.",
+                            uiText("Lưu hoặc tải lại bản đang sửa trước khi khôi phục."),
                           );
                         select(
                           await post(
@@ -837,24 +838,24 @@ export default function CMSWorkspace({
         : h(
             "div",
             { className: "panel cms-empty" },
-            h("h3", null, "Không gian biên tập của anh"),
+            h("h3", null, uiText("Không gian biên tập của anh")),
             h(
               "p",
               null,
-              "Chọn một bài viết hoặc tạo trang mới. AI giúp soạn nội dung và bố cục; anh kiểm soát thời điểm xuất bản.",
+              uiText("Chọn một bài viết hoặc tạo trang mới. AI giúp soạn nội dung và bố cục; anh kiểm soát thời điểm xuất bản."),
             ),
             h(
               "p",
               null,
-              "Trang chủ: ",
+              uiText("Trang chủ: "),
               settings?.homepage_id
-                ? "Đã chọn trang công khai"
-                : "Chưa chọn · đang mở khu quản trị",
+                ? uiText("Đã chọn trang công khai")
+                : uiText("Chưa chọn · đang mở khu quản trị"),
             ),
           ),
     ),
     busy &&
       controller.current &&
-      btn("Dừng tạo AI", () => controller.current.abort(), { disabled: false }),
+      btn(uiText("Dừng tạo AI"), () => controller.current.abort(), { disabled: false }),
   );
 }

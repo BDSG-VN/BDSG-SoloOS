@@ -1,3 +1,6 @@
+import LanguagePicker from "./i18n/language_picker.js";
+import { useLocale, getLocale } from "./i18n/runtime.js";
+import { t as uiText, localeTag } from "./i18n/runtime.js";
 import React, { useCallback, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -43,6 +46,7 @@ async function api(path, options = {}) {
     headers: {
       "Content-Type": "application/json",
       "X-CSRF-Token": csrf,
+      "Accept-Language": getLocale(),
       ...options.headers,
     },
   });
@@ -70,9 +74,9 @@ const ICONS = {
   approvals: ShieldCheck,
 };
 const PERMISSIONS = {
-  read_only: "Chỉ đọc",
-  requires_confirmation: "Cần phê duyệt",
-  full_access: "Toàn quyền",
+  get read_only() { return uiText("Chỉ đọc"); },
+  get requires_confirmation() { return uiText("Cần phê duyệt"); },
+  get full_access() { return uiText("Toàn quyền"); },
 };
 
 function Login({ onLogin }) {
@@ -94,20 +98,21 @@ function Login({ onLogin }) {
     h(
       "div",
       { className: "login-story" },
+      h(LanguagePicker),
       h("span", { className: "eyebrow" }, "BDSG FOUNDATION / OPEN SOURCE"),
       h(
         "h1",
         null,
-        "Một người.",
+        uiText("Một người."),
         h("br"),
-        "Cả một",
+        uiText("Cả một"),
         h("br"),
-        h("em", null, "doanh nghiệp."),
+        h("em", null, uiText("doanh nghiệp.")),
       ),
       h(
         "p",
         null,
-        "Không gian làm việc dành cho người tự xây dựng con đường của mình. Thuê trí tuệ, sở hữu bộ não.",
+        uiText("Không gian làm việc dành cho người tự xây dựng con đường của mình. Thuê trí tuệ, sở hữu bộ não."),
       ),
       h(
         "div",
@@ -145,18 +150,18 @@ function Login({ onLogin }) {
       h(
         "h2",
         null,
-        installed === false ? "Cài đặt quản trị viên" : "Đăng nhập quản trị",
+        installed === false ? uiText("Cài đặt quản trị viên") : uiText("Đăng nhập quản trị"),
       ),
       h(
         "p",
         { className: "muted" },
-        "Đăng nhập vào hệ điều hành riêng của bạn.",
+        uiText("Đăng nhập vào hệ điều hành riêng của bạn."),
       ),
       !recovery &&
         h(
           "label",
           null,
-          "Tên quản trị viên",
+          uiText("Tên quản trị viên"),
           h("input", {
             value: username,
             onChange: (e) => setUsername(e.target.value),
@@ -170,7 +175,7 @@ function Login({ onLogin }) {
         h(
           "label",
           null,
-          "Mật khẩu quản trị",
+          uiText("Mật khẩu quản trị"),
           h("input", {
             type: "password",
             value: password,
@@ -185,14 +190,14 @@ function Login({ onLogin }) {
         h(
           "label",
           null,
-          "Khóa chủ doanh nghiệp",
+          uiText("Khóa chủ doanh nghiệp"),
           h("input", {
             type: "password",
             autoComplete: "current-password",
             value: token,
             onChange: (e) => setToken(e.target.value),
             required: true,
-            placeholder: "Nhập BDSG_OWNER_TOKEN",
+            placeholder: uiText("Nhập BDSG_OWNER_TOKEN"),
           }),
         ),
       h(
@@ -203,19 +208,19 @@ function Login({ onLogin }) {
           checked: recovery,
           onChange: (e) => setRecovery(e.target.checked),
         }),
-        " Dùng khóa máy chủ",
+        uiText(" Dùng khóa máy chủ"),
       ),
       error && h("p", { className: "error", role: "alert" }, error),
       h(
         "button",
         { className: "primary", disabled: busy || installed === null },
-        busy ? "Đang kết nối…" : "Mở không gian làm việc",
+        busy ? uiText("Đang kết nối…") : uiText("Mở không gian làm việc"),
         h(ArrowUpRight, { size: 18 }),
       ),
       h(
         "small",
         { className: "muted" },
-        "Dữ liệu được lưu trên máy chủ của bạn. Khóa được đổi thành phiên đăng nhập bảo mật.",
+        uiText("Dữ liệu được lưu trên máy chủ của bạn. Khóa được đổi thành phiên đăng nhập bảo mật."),
       ),
     ),
   );
@@ -227,7 +232,7 @@ function App() {
   const [page, setPageValue] = useState(
       accountLanding ? "accounts" : "overview",
     ),
-    [lang, setLang] = useState("vi");
+    [lang, setLang] = useLocale();
   const [navOpen, setNavOpen] = useState(false);
   const revealNav = useCallback(() => setNavOpen(true), []);
   useEffect(() => {
@@ -242,7 +247,7 @@ function App() {
     if (
       next === page ||
       !cmsDirty ||
-      window.confirm("Bản nội dung chưa lưu. Rời khu biên tập?")
+      window.confirm(uiText("Bản nội dung chưa lưu. Rời khu biên tập?"))
     ) {
       setPageValue(next);
       setNavOpen(false);
@@ -280,7 +285,7 @@ function App() {
       2,
     ),
   );
-  const labels = {...messages[lang], profile: "Tài khoản của tôi"};
+  const labels = {...messages[lang], profile: uiText("Tài khoản của tôi")};
   const [ownerProfile, setOwnerProfile] = useState(null);
   useEffect(() => { if(authenticated) api("/profile").then(setOwnerProfile).catch(() => {}); }, [authenticated]);
 
@@ -342,6 +347,7 @@ function App() {
             headers: {
               "Content-Type": "application/json",
               "X-CSRF-Token": csrf,
+      "Accept-Language": getLocale(),
             },
             body: JSON.stringify({
               message,
@@ -360,7 +366,7 @@ function App() {
       setMessage("");
     }
   }
-  if (loading) return h("main", { className: "loading" }, "Đang mở Solo-OS…");
+  if (loading) return h("main", { className: "loading" }, uiText("Đang mở Solo-OS…"));
   if (!authenticated) return h(Login, { onLogin: initialize });
 
   const completion = tasks.length
@@ -380,16 +386,16 @@ function App() {
           "div",
           null,
           h("span", { className: "eyebrow" }, "YOUR BUSINESS, YOUR BRAIN"),
-          h("h2", null, "Bớt phân tán.", h("br"), "Thêm tập trung."),
+          h("h2", null, uiText("Bớt phân tán."), h("br"), uiText("Thêm tập trung.")),
           h(
             "p",
             null,
-            "Một nơi để suy nghĩ, ghi nhớ và hoàn thành công việc. Bạn luôn quyết định quyền của AI.",
+            uiText("Một nơi để suy nghĩ, ghi nhớ và hoàn thành công việc. Bạn luôn quyết định quyền của AI."),
           ),
           h(
             "button",
             { onClick: () => setPage("chat"), className: "primary" },
-            "Làm việc cùng AI",
+            uiText("Làm việc cùng AI"),
             h(ArrowUpRight, { size: 18 }),
           ),
         ),
@@ -404,27 +410,27 @@ function App() {
         { className: "metrics" },
         ...[
           [
-            "Kiến thức đã lưu",
+            uiText("Kiến thức đã lưu"),
             notes.length,
-            "Markdown · thuộc sở hữu của bạn",
+            uiText("Markdown · thuộc sở hữu của bạn"),
             BookOpen,
           ],
           [
-            "Công việc đang mở",
+            uiText("Công việc đang mở"),
             tasks.filter((t) => t.state !== "done").length,
-            `${completion}% công việc hoàn thành`,
+            uiText("{0}% công việc hoàn thành", [completion]),
             CheckSquare,
           ],
           [
-            "Kết nối công cụ",
+            uiText("Kết nối công cụ"),
             connectors.filter((c) => c.enabled).length,
-            "Một Hub cho mọi mô hình",
+            uiText("Một Hub cho mọi mô hình"),
             Plug,
           ],
           [
-            "Đang chờ bạn duyệt",
+            uiText("Đang chờ bạn duyệt"),
             approvals.length,
-            "Quyền kiểm soát tại tầng hệ thống",
+            uiText("Quyền kiểm soát tại tầng hệ thống"),
             ShieldCheck,
           ],
         ].map(([label, value, caption, Icon]) =>
@@ -446,11 +452,11 @@ function App() {
           h(
             "div",
             { className: "section-title" },
-            h("h3", null, "Tiếp tục công việc"),
+            h("h3", null, uiText("Tiếp tục công việc")),
             h(
               "button",
               { className: "text-button", onClick: () => setPage("tasks") },
-              "Xem bảng việc →",
+              uiText("Xem bảng việc →"),
             ),
           ),
           tasks.length
@@ -465,7 +471,7 @@ function App() {
                     h(
                       "span",
                       { className: "badge" },
-                      { todo: "Cần làm", doing: "Đang làm", done: "Hoàn tất" }[
+                      { todo: uiText("Cần làm"), doing: uiText("Đang làm"), done: uiText("Hoàn tất") }[
                         task.state
                       ],
                     ),
@@ -475,11 +481,11 @@ function App() {
                 "div",
                 { className: "empty" },
                 h(CheckSquare, { size: 26 }),
-                h("p", null, "Khoảng trống cho ý tưởng tiếp theo."),
+                h("p", null, uiText("Khoảng trống cho ý tưởng tiếp theo.")),
                 h(
                   "button",
                   { onClick: () => setPage("tasks") },
-                  "Tạo công việc đầu tiên",
+                  uiText("Tạo công việc đầu tiên"),
                 ),
               ),
         ),
@@ -487,19 +493,19 @@ function App() {
           "section",
           { className: "panel accent-panel" },
           h("span", { className: "eyebrow" }, "GENERATIVE UI"),
-          h("h3", null, "Không chỉ là câu trả lời."),
+          h("h3", null, uiText("Không chỉ là câu trả lời.")),
           h(
             "p",
             null,
-            "Biểu đồ và biểu mẫu xuất hiện ngay khi AI đang trả lời, qua OpenUI Lang.",
+            uiText("Biểu đồ và biểu mẫu xuất hiện ngay khi AI đang trả lời, qua OpenUI Lang."),
           ),
           h(
             "button",
             { onClick: () => launchChat(true), disabled: chatBusy },
-            "Thử luồng giao diện mẫu",
+            uiText("Thử luồng giao diện mẫu"),
             h(ArrowUpRight, { size: 16 }),
           ),
-          h("small", null, "Dữ liệu minh họa · không cần khóa LLM"),
+          h("small", null, uiText("Dữ liệu minh họa · không cần khóa LLM")),
         ),
       ),
     );
@@ -568,7 +574,7 @@ function App() {
       h(
         "button",
         { onClick: () => setPage("accounts"), disabled: chatBusy },
-        "Quản lý tài khoản AI",
+        uiText("Quản lý tài khoản AI"),
       ),
       h(
         "div",
@@ -576,7 +582,7 @@ function App() {
         h(
           "span",
           { className: "badge" },
-          engine.configured ? "Đã kết nối nguồn AI" : "Chưa kết nối nguồn AI",
+          engine.configured ? uiText("Đã kết nối nguồn AI") : uiText("Chưa kết nối nguồn AI"),
         ),
         h(
           "label",
@@ -596,7 +602,7 @@ function App() {
             onClick: () => launchChat(true),
             disabled: chatBusy,
           },
-          "Thử bản mẫu",
+          uiText("Thử bản mẫu"),
         ),
         chatBusy &&
           h(
@@ -607,7 +613,7 @@ function App() {
                 setChatBusy(false);
               },
             },
-            "Dừng luồng",
+            uiText("Dừng luồng"),
           ),
       ),
       h(
@@ -619,18 +625,18 @@ function App() {
             "div",
             { className: "empty chat-empty" },
             h(Bot, { size: 32 }),
-            h("h2", null, "Hôm nay bạn muốn xây dựng điều gì?"),
+            h("h2", null, uiText("Hôm nay bạn muốn xây dựng điều gì?")),
             h(
               "p",
               null,
-              "Lập kế hoạch, đọc bộ nhớ hoặc yêu cầu AI kết xuất biểu đồ. Mọi công cụ đều đi qua MCP Hub.",
+              uiText("Lập kế hoạch, đọc bộ nhớ hoặc yêu cầu AI kết xuất biểu đồ. Mọi công cụ đều đi qua MCP Hub."),
             ),
           ),
         ...history.map((entry) =>
           h(
             "article",
             { key: entry.id, className: `chat-message ${entry.role}` },
-            h("small", null, entry.role === "user" ? "BẠN" : "SOLO-OS"),
+            h("small", null, entry.role === "user" ? uiText("BẠN") : "SOLO-OS"),
             entry.role === "user"
               ? h("p", null, entry.content)
               : h(OpenUIRender, { response: entry.content }),
@@ -643,7 +649,7 @@ function App() {
             h(
               "small",
               null,
-              stream.demo ? "LUỒNG MẪU · DỮ LIỆU MINH HỌA" : "SOLO-OS",
+              stream.demo ? uiText("LUỒNG MẪU · DỮ LIỆU MINH HỌA") : "SOLO-OS",
             ),
             h(OpenUIRender, {
               key: stream.key,
@@ -651,7 +657,7 @@ function App() {
               request: stream.request,
               onConfirmation: () => {
                 setNotice(
-                  "AI đang chờ phê duyệt. Mở mục Phê duyệt để xem tham số.",
+                  uiText("AI đang chờ phê duyệt. Mở mục Phê duyệt để xem tham số."),
                 );
                 refresh().catch((err) => setError(err.message));
               },
@@ -677,11 +683,11 @@ function App() {
                 ) {
                   act(async () => {
                     await post("/tasks", { title: goal });
-                    setNotice("Đã thêm mục tiêu vào bảng công việc.");
+                    setNotice(uiText("Đã thêm mục tiêu vào bảng công việc."));
                   });
                 } else
                   setNotice(
-                    "Đã nhận nội dung biểu mẫu. Chưa gắn hành động cho biểu mẫu này.",
+                    uiText("Đã nhận nội dung biểu mẫu. Chưa gắn hành động cho biểu mẫu này."),
                   );
               },
             }),
@@ -706,21 +712,21 @@ function App() {
         h("textarea", {
           value: message,
           onChange: (e) => setMessage(e.target.value),
-          placeholder: "Nhờ AI lập kế hoạch cho doanh nghiệp của bạn…",
+          placeholder: uiText("Nhờ AI lập kế hoạch cho doanh nghiệp của bạn…"),
           rows: 2,
           disabled: chatBusy,
-          "aria-label": "Tin nhắn cho AI",
+          "aria-label": uiText("Tin nhắn cho AI"),
         }),
         h(
           "div",
           null,
-          h("small", null, "Công cụ thực thi qua MCP Hub · quyền do bạn cấp"),
+          h("small", null, uiText("Công cụ thực thi qua MCP Hub · quyền do bạn cấp")),
           h(
             "button",
             {
               className: "primary icon-button",
               disabled: chatBusy || !message.trim(),
-              "aria-label": "Gửi tin nhắn",
+              "aria-label": uiText("Gửi tin nhắn"),
             },
             h(ArrowUp, { size: 20 }),
           ),
@@ -739,7 +745,7 @@ function App() {
           "div",
           { className: "section-title" },
           h("h3", null, "Second Brain"),
-          h("span", { className: "badge" }, `${notes.length} ghi chú`),
+          h("span", { className: "badge" }, uiText("{0} ghi chú", [notes.length])),
         ),
         ...notes.map((note) =>
           h(
@@ -776,17 +782,17 @@ function App() {
               });
               setNotice(
                 result.status === "requires_confirmation"
-                  ? "Đã gửi ghi chú để phê duyệt. Mở mục Phê duyệt để lưu."
-                  : "Đã lưu ghi chú.",
+                  ? uiText("Đã gửi ghi chú để phê duyệt. Mở mục Phê duyệt để lưu.")
+                  : uiText("Đã lưu ghi chú."),
               );
             });
           },
         },
-        h("h3", null, "Ghi chú thuộc về bạn"),
+        h("h3", null, uiText("Ghi chú thuộc về bạn")),
         h(
           "label",
           null,
-          "Đường dẫn Markdown",
+          uiText("Đường dẫn Markdown"),
           h("input", {
             value: notePath,
             onChange: (e) => setNotePath(e.target.value),
@@ -796,19 +802,19 @@ function App() {
         h(
           "label",
           null,
-          "Nội dung",
+          uiText("Nội dung"),
           h("textarea", {
             rows: 16,
             value: noteContent,
             onChange: (e) => setNoteContent(e.target.value),
             placeholder:
-              "# Kiến thức doanh nghiệp\n\nLiên kết bằng [[tên ghi chú]].",
+              uiText("# Kiến thức doanh nghiệp\n\nLiên kết bằng [[tên ghi chú]]."),
           }),
         ),
         h(
           "button",
           { className: "primary", disabled: saving },
-          "Lưu qua MCP Hub",
+          uiText("Lưu qua MCP Hub"),
           h(ShieldCheck, { size: 16 }),
         ),
       ),
@@ -829,7 +835,7 @@ function App() {
       h(
         "section",
         { className: "panel" },
-        h("h3", null, "Công cụ của doanh nghiệp"),
+        h("h3", null, uiText("Công cụ của doanh nghiệp")),
         ...connectors.map((connector) =>
           h(
             "article",
@@ -850,7 +856,7 @@ function App() {
             h(
               "small",
               { className: "muted" },
-              Object.keys(connector.tools).join(" · ") || "Chưa cấp công cụ",
+              Object.keys(connector.tools).join(" · ") || uiText("Chưa cấp công cụ"),
             ),
             h(
               "button",
@@ -861,7 +867,7 @@ function App() {
                   setConnectorDraft(JSON.stringify(editable, null, 2));
                 },
               },
-              "Chỉnh sửa quyền →",
+              uiText("Chỉnh sửa quyền →"),
             ),
           ),
         ),
@@ -875,25 +881,25 @@ function App() {
             act(async () => {
               await post("/mcp/connectors", JSON.parse(connectorDraft), "PUT");
               setNotice(
-                "Đã cập nhật cấu hình MCP. Các phê duyệt cũ sẽ không còn hiệu lực.",
+                uiText("Đã cập nhật cấu hình MCP. Các phê duyệt cũ sẽ không còn hiệu lực."),
               );
             });
           },
         },
-        h("h3", null, "Cấu hình kết nối"),
+        h("h3", null, uiText("Cấu hình kết nối")),
         h(
           "p",
           { className: "muted" },
-          "Cấp quyền từng công cụ. tools: { tên: true } xác nhận công cụ chỉ đọc; false dành cho công cụ có thể ghi.",
+          uiText("Cấp quyền từng công cụ. tools: { tên: true } xác nhận công cụ chỉ đọc; false dành cho công cụ có thể ghi."),
         ),
         h("textarea", {
           className: "code",
           rows: 17,
           value: connectorDraft,
-          "aria-label": "Cấu hình MCP JSON",
+          "aria-label": uiText("Cấu hình MCP JSON"),
           onChange: (e) => setConnectorDraft(e.target.value),
         }),
-        h("button", { className: "primary", disabled: saving }, "Lưu cấu hình"),
+        h("button", { className: "primary", disabled: saving }, uiText("Lưu cấu hình")),
       ),
     );
 
@@ -904,7 +910,7 @@ function App() {
       h(
         "div",
         { className: "section-title" },
-        h("h3", null, "Bạn giữ quyền quyết định"),
+        h("h3", null, uiText("Bạn giữ quyền quyết định")),
         h(
           "button",
           {
@@ -912,13 +918,13 @@ function App() {
             onClick: () => act(refresh),
             disabled: saving,
           },
-          "Làm mới",
+          uiText("Làm mới"),
         ),
       ),
       h(
         "p",
         { className: "muted" },
-        "Mỗi phê duyệt chỉ dùng một lần, gắn với đúng công cụ và tham số. Hết hạn sau 5 phút.",
+        uiText("Mỗi phê duyệt chỉ dùng một lần, gắn với đúng công cụ và tham số. Hết hạn sau 5 phút."),
       ),
       ...approvals.map((approval) =>
         h(
@@ -935,14 +941,14 @@ function App() {
             h(
               "span",
               { className: "badge" },
-              approval.payload.actor === "agent" ? "AI yêu cầu" : "Bạn yêu cầu",
+              approval.payload.actor === "agent" ? uiText("AI yêu cầu") : uiText("Bạn yêu cầu"),
             ),
           ),
           h("pre", null, JSON.stringify(approval.payload.arguments, null, 2)),
           h(
             "small",
             { className: "muted" },
-            `Hết hạn: ${new Date(approval.expires * 1000).toLocaleTimeString("vi-VN")}`,
+            uiText("Hết hạn: {0}", [new Date(approval.expires * 1000).toLocaleTimeString("vi-VN")]),
           ),
           h(
             "div",
@@ -960,12 +966,12 @@ function App() {
                     );
                     setNotice(
                       result.status === "completed"
-                        ? "Đã duyệt và thực thi."
-                        : "Công cụ báo lỗi; xem kết quả trước khi thử lại.",
+                        ? uiText("Đã duyệt và thực thi.")
+                        : uiText("Công cụ báo lỗi; xem kết quả trước khi thử lại."),
                     );
                   }),
               },
-              "Duyệt và thực thi",
+              uiText("Duyệt và thực thi"),
             ),
             h(
               "button",
@@ -978,7 +984,7 @@ function App() {
                     }),
                   ),
               },
-              "Từ chối",
+              uiText("Từ chối"),
             ),
           ),
         ),
@@ -988,7 +994,7 @@ function App() {
           "div",
           { className: "empty" },
           h(ShieldCheck, { size: 32 }),
-          h("p", null, "Không có hành động nào đang chờ duyệt."),
+          h("p", null, uiText("Không có hành động nào đang chờ duyệt.")),
         ),
     );
 
@@ -1019,7 +1025,7 @@ function App() {
         {
           className: "nav-close",
           onClick: () => setNavOpen(false),
-          "aria-label": "Đóng menu",
+          "aria-label": uiText("Đóng menu"),
         },
         h(X, { size: 20 }),
       ),
@@ -1043,24 +1049,24 @@ function App() {
           h(
             "div",
             null,
-            "Bạn sở hữu bộ não.",
-            h("small", null, "Markdown + SQLite trên máy chủ riêng"),
+            uiText("Bạn sở hữu bộ não."),
+            h("small", null, uiText("Markdown + SQLite trên máy chủ riêng")),
           ),
         ),
-        h("button", {className: "profile", disabled: chatBusy, onClick: () => setPage("profile"), "aria-label": "Tài khoản của tôi"},
+        h("button", {className: "profile", disabled: chatBusy, onClick: () => setPage("profile"), "aria-label": uiText("Tài khoản của tôi")},
           h("span", {className: "avatar"}, (ownerProfile?.display_name || "TK").slice(0,2).toUpperCase()),
-          h("span", null, ownerProfile?.display_name || "Tài khoản của tôi", h("small", null, "Thông tin & mật khẩu"))),
+          h("span", null, ownerProfile?.display_name || uiText("Tài khoản của tôi"), h("small", null, uiText("Thông tin & mật khẩu")))),
         h(
           "button",
           {
             className: "profile",
-            "aria-label": "Đăng xuất",
+            "aria-label": uiText("Đăng xuất"),
             disabled: chatBusy,
             onClick: async () => {
               try {
                 if (
                   cmsDirty &&
-                  !window.confirm("Bản nội dung chưa lưu. Đăng xuất?")
+                  !window.confirm(uiText("Bản nội dung chưa lưu. Đăng xuất?"))
                 )
                   return;
                 await api("/session", { method: "DELETE" });
@@ -1071,7 +1077,7 @@ function App() {
               }
             },
           },
-          h("span", null, "Đăng xuất"),
+          h("span", null, uiText("Đăng xuất")),
           h(LogOut, { size: 16 }),
         ),
       ),
@@ -1079,7 +1085,7 @@ function App() {
     navOpen &&
       h("button", {
         className: "nav-backdrop",
-        "aria-label": "Đóng điều hướng",
+        "aria-label": uiText("Đóng điều hướng"),
         onClick: () => setNavOpen(false),
       }),
     h(
@@ -1092,7 +1098,7 @@ function App() {
           "button",
           {
             className: "nav-toggle",
-            "aria-label": "Mở menu",
+            "aria-label": uiText("Mở menu"),
             "aria-expanded": navOpen,
             "aria-controls": "workspace-navigation",
             onClick: () => setNavOpen(!navOpen),
@@ -1102,23 +1108,16 @@ function App() {
         h(
           "div",
           null,
-          h("span", { className: "muted" }, "Không gian làm việc / "),
+          h("span", { className: "muted" }, uiText("Không gian làm việc / ")),
           labels[page],
         ),
         h(
           "div",
           { className: "topbar-right" },
-          h("a", {href: "/", target: "_blank", rel: "noopener noreferrer", className: "text-button"}, "Mở website ↗"),
+          h("a", {href: "/", target: "_blank", rel: "noopener noreferrer", className: "text-button"}, uiText("Mở website ↗")),
           h("span", { className: "status-dot" }),
           "Local-first",
-          h(
-            "button",
-            {
-              className: "text-button",
-              onClick: () => setLang(lang === "vi" ? "en" : "vi"),
-            },
-            lang.toUpperCase(),
-          ),
+          h(LanguagePicker),
         ),
       ),
       h(
@@ -1136,7 +1135,7 @@ function App() {
           h(
             "span",
             { className: "date" },
-            new Date().toLocaleDateString("vi-VN", {
+            new Date().toLocaleDateString(localeTag(), {
               weekday: "long",
               day: "numeric",
               month: "long",

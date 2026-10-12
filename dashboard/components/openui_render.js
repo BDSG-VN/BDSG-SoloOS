@@ -1,3 +1,4 @@
+import { t as uiText, localeTag } from "../i18n/runtime.js";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Renderer,
@@ -57,7 +58,7 @@ const BarChart = defineComponent({
       h(
         "details",
         null,
-        h("summary", null, "Xem dữ liệu"),
+        h("summary", null, uiText("Xem dữ liệu")),
         h(
           "table",
           null,
@@ -188,7 +189,7 @@ class RenderBoundary extends React.Component {
   }
   render() {
     return this.state.error
-      ? h("p", { role: "alert" }, "Không thể kết xuất giao diện này.")
+      ? h("p", { role: "alert" }, uiText("Không thể kết xuất giao diện này."))
       : this.props.children;
   }
 }
@@ -234,28 +235,28 @@ export default function OpenUIRender({
           credentials: "include",
           signal: controller.signal,
         });
-        if (!result.ok) throw new Error(`API trả về lỗi ${result.status}.`);
+        if (!result.ok) throw new Error(uiText("API trả về lỗi {0}.", [result.status]));
         if (!result.headers.get("content-type")?.includes("text/event-stream"))
-          throw new Error("API phải trả về SSE.");
+          throw new Error(uiText("API phải trả về SSE."));
         let complete = false;
         for await (const event of readSSE(result.body)) {
           if (!active) break;
           if (event.type === "token" && typeof event.text === "string") {
             content += event.text;
             if (content.length > 200000)
-              throw new Error("Giao diện vượt giới hạn kích thước.");
+              throw new Error(uiText("Giao diện vượt giới hạn kích thước."));
             if (frame === null) frame = requestAnimationFrame(flush);
           } else if (event.type === "confirmation") {
             callbacks.current.onConfirmation?.(event.confirmation_id);
           } else if (event.type === "error") {
-            throw new Error(event.message || "Luồng AI gặp lỗi.");
+            throw new Error(event.message || uiText("Luồng AI gặp lỗi."));
           } else if (event.type === "done") {
             complete = true;
             break;
           }
         }
         if (active && !complete)
-          throw new Error("Luồng kết thúc trước tín hiệu hoàn tất.");
+          throw new Error(uiText("Luồng kết thúc trước tín hiệu hoàn tất."));
         if (active) callbacks.current.onComplete?.(content);
       } catch (err) {
         if (active && err.name !== "AbortError") {
@@ -301,7 +302,7 @@ export default function OpenUIRender({
       h(
         "div",
         { className: "stream-status", role: "status" },
-        "Đang kết xuất giao diện…",
+        uiText("Đang kết xuất giao diện…"),
       ),
   );
 }

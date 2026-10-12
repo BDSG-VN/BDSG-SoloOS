@@ -2,6 +2,8 @@
 
 from html import escape
 
+from server.core.i18n import get_locale, static_html, t
+
 
 def e(value):
     return escape(str(value), quote=True)
@@ -48,18 +50,18 @@ def layout(title, content, description="", preview=False, site=None):
     site = site or SiteSettings()
     theme = THEMES.get(site.theme, THEMES["personal"])
     theme_style = f":root{{--accent:{theme[2]};--paper:{theme[3]}}}"
-    banner = '<div class="preview">Bản xem trước riêng tư · chưa xuất bản</div>' if preview else ""
-    return f'''<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(title)}</title><meta name="description" content="{e(description)}"><style>{STYLE}{theme_style}</style></head><body>{banner}<header><a href="/">{e(site.title)}</a><nav><a href="/news">Tin tức</a> · <a href="/search">Tìm kiếm</a> · <a href="/account">Đăng nhập</a></nav></header><main>{content}</main><footer><span>{e(site.title)}</span><span>Vận hành bằng BDSG SoloOS · BDSG Foundation</span></footer></body></html>'''
+    banner = static_html('<div class="preview">Bản xem trước riêng tư · chưa xuất bản</div>') if preview else ""
+    return f'''<!doctype html><html lang="{get_locale()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(title)}</title><meta name="description" content="{e(description)}"><style>{STYLE}{theme_style}</style></head><body>{banner}<header><a href="/">{e(site.title)}</a><nav><a href="/news">{t("Tin tức")}</a> · <a href="/search">{t("Tìm kiếm")}</a> · <a href="/account">{t("Đăng nhập")}</a> · <a href="?lang=vi" lang="vi">Tiếng Việt</a> / <a href="?lang=en" lang="en">English</a></nav></header><main>{content}</main><footer><span>{e(site.title)}</span><span>{t("Vận hành bằng BDSG SoloOS · BDSG Foundation")}</span></footer></body></html>'''
 
 
 def document_page(doc, preview=False, site=None):
     meta = " · ".join(e(v) for v in doc.get("categories", []))
     if doc.get("ai_generated"):
-        meta += " · Nội dung có hỗ trợ AI"
+        meta += " · " + t("Nội dung có hỗ trợ AI")
     sources = ""
     if doc.get("sources"):
         sources = (
-            '<aside class="sources"><h3>Nguồn tham khảo</h3><ul>'
+            static_html('<aside class="sources"><h3>Nguồn tham khảo</h3><ul>')
             + "".join(
                 f'<li><a href="{e(u)}" rel="noopener noreferrer">{e(u)}</a></li>'
                 for u in doc["sources"]
@@ -86,7 +88,7 @@ def news_page(posts, category="", site=None):
     from urllib.parse import quote
 
     filters = (
-        '<p><a href="/news">Tất cả</a> · '
+        static_html('<p><a href="/news">Tất cả</a> · ')
         + " · ".join(f'<a href="/news?category={quote(c)}">{e(c)}</a>' for c in categories)
         + "</p>"
     )
@@ -96,11 +98,11 @@ def news_page(posts, category="", site=None):
         for p in visible
     )
     return layout(
-        "Tin tức",
-        "<h1>Tin tức</h1>"
+        t("Tin tức"),
+        static_html("<h1>Tin tức</h1>")
         + filters
         + '<div class="cards">'
-        + (cards or "<p>Chưa có bài viết được xuất bản.</p>")
+        + (cards or static_html("<p>Chưa có bài viết được xuất bản.</p>"))
         + "</div>",
         site=site,
     )

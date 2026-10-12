@@ -1,3 +1,4 @@
+import { t as uiText, localeTag } from "../i18n/runtime.js";
 import React, { useEffect, useState } from "react";
 const h = React.createElement;
 // Keep authorization codes in memory only; remove them before any subsequent navigation.
@@ -43,7 +44,7 @@ export default function AIAccounts({ api, post, onChange }) {
       callback = null;
       run(async () => {
         await post("/ai/chatgpt/finish", { callback_url: value });
-        setNotice("Đã kết nối ChatGPT. Chọn model để bắt đầu.");
+        setNotice(uiText("Đã kết nối ChatGPT. Chọn model để bắt đầu."));
       });
     } else reload().catch((err) => setError(err.message));
   }, []);
@@ -74,24 +75,24 @@ export default function AIAccounts({ api, post, onChange }) {
   return h(
     "section",
     { className: "panel workspace-panel", style: { padding: "24px" } },
-    h("h2", null, "Tài khoản AI"),
+    h("h2", null, uiText("Tài khoản AI")),
     h(
       "p",
       null,
-      "Kết nối tài khoản ChatGPT bằng quyền do chính bạn cấp. Khả năng sử dụng phụ thuộc gói thuê bao và hạn mức được nhà cung cấp cho phép.",
+      uiText("Kết nối tài khoản ChatGPT bằng quyền do chính bạn cấp. Khả năng sử dụng phụ thuộc gói thuê bao và hạn mức được nhà cung cấp cho phép."),
     ),
     error && h("p", { role: "alert", className: "error" }, error),
     notice && h("p", { role: "status" }, notice),
-    h("h3", null, "Đăng nhập ChatGPT trên máy của bạn"),
+    h("h3", null, uiText("Đăng nhập ChatGPT trên máy của bạn")),
     h(
       "p",
       null,
-      "Tải trình hỗ trợ, mở Terminal tại thư mục tải xuống và chạy lệnh dưới đây. Trình hỗ trợ mở trang quản trị; sau đó bấm Continue with ChatGPT. Giữ Terminal mở cho đến khi hoàn tất đăng nhập.",
+      uiText("Tải trình hỗ trợ, mở Terminal tại thư mục tải xuống và chạy lệnh dưới đây. Trình hỗ trợ mở trang quản trị; sau đó bấm Continue with ChatGPT. Giữ Terminal mở cho đến khi hoàn tất đăng nhập."),
     ),
     h(
       "a",
       { href: "/api/ai/chatgpt/helper", download: true },
-      "Tải soloos-chatgpt-login.py",
+      uiText("Tải soloos-chatgpt-login.py"),
     ),
     h(
       "pre",
@@ -103,12 +104,12 @@ export default function AIAccounts({ api, post, onChange }) {
       { disabled: busy, onClick: () => login() },
       "Continue with ChatGPT",
     ),
-    h("h3", null, "Nguồn AI đang sử dụng"),
+    h("h3", null, uiText("Nguồn AI đang sử dụng")),
     data &&
       h(
         "select",
         {
-          "aria-label": "Nguồn AI",
+          "aria-label": uiText("Nguồn AI"),
           disabled: busy,
           value: data.active_account,
           onChange: (e) =>
@@ -117,12 +118,12 @@ export default function AIAccounts({ api, post, onChange }) {
         h(
           "option",
           { value: "gateway" },
-          `LLM Gateway${data.gateway_configured ? "" : " — chưa cấu hình"}`,
+          `LLM Gateway${data.gateway_configured ? "" : uiText(" — chưa cấu hình")}`,
         ),
         h(
           "option",
           { value: "claude-native" },
-          "Claude Code — đăng nhập qua CLI chính thức",
+          uiText("Claude Code — đăng nhập qua CLI chính thức"),
         ),
         ...data.accounts
           .filter((a) => a.connected)
@@ -145,7 +146,7 @@ export default function AIAccounts({ api, post, onChange }) {
             value: model,
             onChange: (e) => setModel(e.target.value),
           },
-          h("option", { value: "" }, "Tự chọn model khả dụng"),
+          h("option", { value: "" }, uiText("Tự chọn model khả dụng")),
           ...models.map((m) => h("option", { key: m.id, value: m.id }, m.name)),
         ),
         h(
@@ -157,7 +158,7 @@ export default function AIAccounts({ api, post, onChange }) {
                 post("/ai/select", { account_id: data.active_account, model }),
               ),
           },
-          "Lưu model",
+          uiText("Lưu model"),
         ),
       ),
     ...(data?.accounts || []).map((a) =>
@@ -167,12 +168,12 @@ export default function AIAccounts({ api, post, onChange }) {
         h(
           "strong",
           null,
-          `${a.label} · ${a.connected ? "Đã kết nối" : "Đã ngắt"}`,
+          `${a.label} · ${a.connected ? uiText("Đã kết nối") : uiText("Đã ngắt")}`,
         ),
         h(
           "button",
           { disabled: busy, onClick: () => login(a.id) },
-          "Đăng nhập lại",
+          uiText("Đăng nhập lại"),
         ),
         a.connected &&
           h(
@@ -187,12 +188,12 @@ export default function AIAccounts({ api, post, onChange }) {
                   );
                   setNotice(
                     result.remote_revocation_confirmed
-                      ? "Đã thu hồi kết nối."
-                      : "Đã xóa thông tin đăng nhập trên SoloOS. Chưa xác nhận thu hồi phía ChatGPT; hãy kiểm tra các ứng dụng được cấp quyền trong cài đặt ChatGPT.",
+                      ? uiText("Đã thu hồi kết nối.")
+                      : uiText("Đã xóa thông tin đăng nhập trên SoloOS. Chưa xác nhận thu hồi phía ChatGPT; hãy kiểm tra các ứng dụng được cấp quyền trong cài đặt ChatGPT."),
                   );
                 }),
             },
-            "Ngắt kết nối",
+            uiText("Ngắt kết nối"),
           ),
       ),
     ),
@@ -205,25 +206,25 @@ export default function AIAccounts({ api, post, onChange }) {
             const s = await api("/ai/claude/status");
             setNotice(
               s.connected
-                ? "Claude Code đã đăng nhập."
-                : s.message || "Claude Code chưa đăng nhập.",
+                ? uiText("Claude Code đã đăng nhập.")
+                : s.message || uiText("Claude Code chưa đăng nhập."),
             );
           }),
       },
-      "Kiểm tra Claude Code",
+      uiText("Kiểm tra Claude Code"),
     ),
-    h("h3", null, "Sử dụng ChatGPT trong 30 ngày"),
+    h("h3", null, uiText("Sử dụng ChatGPT trong 30 ngày")),
     ...(data?.usage || []).map((u, i) =>
       h(
         "p",
         { key: i },
-        `${u.model} · ${u.source} · ${u.requests} lượt · ${u.status} · token vào/ra: ${u.input_tokens ?? "—"}/${u.output_tokens ?? "—"}`,
+        uiText("{0} · {1} · {2} lượt · {3} · token vào/ra: {4}/{5}", [u.model, u.source, u.requests, u.status, u.input_tokens ?? "—", u.output_tokens ?? "—"]),
       ),
     ),
     h(
       "p",
       null,
-      "Claude: dùng bản CLI chính thức do bạn cài và đăng nhập trên máy chủ; SoloOS không thu thập token Claude. Chế độ này chỉ soạn nội dung, chưa có thao tác công cụ. Các nền tảng khác dùng Gateway hoặc model tự lưu trữ.",
+      uiText("Claude: dùng bản CLI chính thức do bạn cài và đăng nhập trên máy chủ; SoloOS không thu thập token Claude. Chế độ này chỉ soạn nội dung, chưa có thao tác công cụ. Các nền tảng khác dùng Gateway hoặc model tự lưu trữ."),
     ),
   );
 }

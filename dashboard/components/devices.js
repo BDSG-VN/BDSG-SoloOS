@@ -1,3 +1,4 @@
+import { t as uiText, localeTag } from "../i18n/runtime.js";
 import React, { useEffect, useState } from "react";
 const h = React.createElement;
 export default function Devices({ api, post }) {
@@ -8,10 +9,10 @@ export default function Devices({ api, post }) {
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   const labels = {
-    read: "Xem dữ liệu & vận hành",
-    chat: "Trò chuyện AI",
-    tasks: "Tạo/sửa công việc",
-    approvals: "Duyệt thực thi công cụ",
+    read: uiText("Xem dữ liệu & vận hành"),
+    chat: uiText("Trò chuyện AI"),
+    tasks: uiText("Tạo/sửa công việc"),
+    approvals: uiText("Duyệt thực thi công cụ"),
   };
   async function reload() {
     setRows(await api("/devices"));
@@ -39,26 +40,26 @@ export default function Devices({ api, post }) {
   return h(
     "section",
     { className: "panel workspace-panel", style: { padding: 24 } },
-    h("h2", null, "Thiết bị của bạn"),
+    h("h2", null, uiText("Thiết bị của bạn")),
     h(
       "p",
       null,
-      "Ghép ứng dụng native bằng mã dùng một lần, hết hạn sau 5 phút. Quyền thiết bị có hạn 30 ngày và có thể thu hồi. Không cần đưa khóa chủ doanh nghiệp vào ứng dụng.",
+      uiText("Ghép ứng dụng native bằng mã dùng một lần, hết hạn sau 5 phút. Quyền thiết bị có hạn 30 ngày và có thể thu hồi. Không cần đưa khóa chủ doanh nghiệp vào ứng dụng."),
     ),
     error && h("p", { role: "alert" }, error),
     h(
       "fieldset",
       { disabled: busy },
-      h("legend", null, "Ghép thiết bị mới"),
+      h("legend", null, uiText("Ghép thiết bị mới")),
       h(
         "label",
         null,
-        "Tên thiết bị",
+        uiText("Tên thiết bị"),
         h("input", {
           value: name,
           maxLength: 100,
           onChange: (e) => setName(e.target.value),
-          placeholder: "Ví dụ: iPhone của tôi",
+          placeholder: uiText("Ví dụ: iPhone của tôi"),
         }),
       ),
       ...Object.entries(labels).map(([key, label]) =>
@@ -92,7 +93,7 @@ export default function Devices({ api, post }) {
               setCode(result.code);
             }),
         },
-        "Tạo mã ghép",
+        uiText("Tạo mã ghép"),
       ),
     ),
     code &&
@@ -102,7 +103,7 @@ export default function Devices({ api, post }) {
         h(
           "label",
           null,
-          "Mã ghép — chỉ nhập vào ứng dụng của bạn",
+          uiText("Mã ghép — chỉ nhập vào ứng dụng của bạn"),
           h("input", {
             readOnly: true,
             value: code,
@@ -110,12 +111,12 @@ export default function Devices({ api, post }) {
             spellCheck: false,
           }),
         ),
-        h("button", { onClick: () => setCode(null) }, "Ẩn mã"),
+        h("button", { onClick: () => setCode(null) }, uiText("Ẩn mã")),
       ),
     h(
       "button",
       { disabled: busy, onClick: () => run(reload) },
-      "Làm mới thiết bị",
+      uiText("Làm mới thiết bị"),
     ),
     ...rows.map((d) =>
       h(
@@ -130,8 +131,8 @@ export default function Devices({ api, post }) {
             "small",
             null,
             d.revoked
-              ? "Đã thu hồi"
-              : "Hết hạn: " + new Date(d.expires * 1000).toLocaleString(),
+              ? uiText("Đã thu hồi")
+              : uiText("Hết hạn: ") + new Date(d.expires * 1000).toLocaleString(),
           ),
         ),
         !d.revoked &&
@@ -142,17 +143,17 @@ export default function Devices({ api, post }) {
               onClick: () => {
                 if (
                   window.confirm(
-                    "Thu hồi quyền thiết bị này? Yêu cầu tiếp theo sẽ bị chặn; thao tác đã gửi có thể đã thực hiện.",
+                    uiText("Thu hồi quyền thiết bị này? Yêu cầu tiếp theo sẽ bị chặn; thao tác đã gửi có thể đã thực hiện."),
                   )
                 )
                   run(() => api("/devices/" + d.id, { method: "DELETE" }));
               },
             },
-            "Thu hồi thiết bị",
+            uiText("Thu hồi thiết bị"),
           ),
       ),
     ),
     !rows.length &&
-      h("p", { className: "empty" }, "Chưa có thiết bị ghép nối."),
+      h("p", { className: "empty" }, uiText("Chưa có thiết bị ghép nối.")),
   );
 }

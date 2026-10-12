@@ -1,7 +1,11 @@
+import LanguagePicker from "../i18n/language_picker.js";
+import { useLocale } from "../i18n/runtime.js";
+import { t as uiText, localeTag } from "../i18n/runtime.js";
 import React, { useEffect, useState } from "react";
 import OpenUIRender from "./openui_render.js";
 const h = React.createElement;
 export default function SharedChat() {
+  useLocale();
   const [data, setData] = useState(null),
     [error, setError] = useState("");
   useEffect(() => {
@@ -20,18 +24,19 @@ export default function SharedChat() {
       className: "workspace-panel",
       style: { maxWidth: 900, margin: "40px auto", padding: 24 },
     },
-    h("h1", null, data?.title || "Cuộc trò chuyện được chia sẻ"),
+    h(LanguagePicker),
+    h("h1", null, data?.title || uiText("Cuộc trò chuyện được chia sẻ")),
     h(
       "p",
       null,
-      "Bản chụp chỉ đọc. Nội dung AI cần được kiểm chứng; các biểu mẫu ở đây không thực hiện thao tác.",
+      uiText("Bản chụp chỉ đọc. Nội dung AI cần được kiểm chứng; các biểu mẫu ở đây không thực hiện thao tác."),
     ),
     error && h("p", { role: "alert" }, error),
     ...(data?.messages || []).map((m, i) =>
       h(
         "article",
         { key: i, className: "chat-message " + m.role },
-        h("small", null, m.role === "user" ? "NGƯỜI DÙNG" : "AI"),
+        h("small", null, m.role === "user" ? uiText("NGƯỜI DÙNG") : "AI"),
         m.role === "user"
           ? h("p", null, m.content)
           : h("div", { inert: true }, h(OpenUIRender, { response: m.content })),

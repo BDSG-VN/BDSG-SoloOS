@@ -1,3 +1,4 @@
+import { t as uiText, localeTag } from "../i18n/runtime.js";
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useUnsaved } from "./use_unsaved.js";
 import ContextPanel from "./context_panel.js";
@@ -70,12 +71,12 @@ export default function Sessions({ api, post, onOpen, onDirtyChange }) {
   return h(
     "section",
     { className: "panel workspace-panel", style: { padding: 24 } },
-    h("h2", null, "Cuộc trò chuyện & dự án"),
+    h("h2", null, uiText("Cuộc trò chuyện & dự án")),
     error && h("p", { role: "alert" }, error),
     h(
       "label",
       null,
-      "Tìm theo tên hoặc nội dung",
+      uiText("Tìm theo tên hoặc nội dung"),
       h("input", {
         value: search,
         onChange: (e) => {
@@ -93,7 +94,7 @@ export default function Sessions({ api, post, onOpen, onDirtyChange }) {
           if (mayDiscard()) setArchived(e.target.checked);
         },
       }),
-      " Đã lưu trữ",
+      uiText(" Đã lưu trữ"),
     ),
     h(
       "div",
@@ -101,11 +102,11 @@ export default function Sessions({ api, post, onOpen, onDirtyChange }) {
       h(
         "label",
         null,
-        "Dự án",
+        uiText("Dự án"),
         h(
           "select",
           { value: project, onChange: (e) => setProject(e.target.value) },
-          h("option", { value: "" }, "Không gắn dự án"),
+          h("option", { value: "" }, uiText("Không gắn dự án")),
           ...projects.map((p) =>
             h("option", { key: p.id, value: p.id }, p.title),
           ),
@@ -124,13 +125,13 @@ export default function Sessions({ api, post, onOpen, onDirtyChange }) {
               onOpen(s);
             }),
         },
-        "Cuộc trò chuyện mới",
+        uiText("Cuộc trò chuyện mới"),
       ),
     ),
     h(
       "label",
       null,
-      "Bộ nhớ cho cuộc trò chuyện mới",
+      uiText("Bộ nhớ cho cuộc trò chuyện mới"),
       h(
         "select",
         { value: brain, onChange: (e) => setBrain(e.target.value) },
@@ -140,11 +141,11 @@ export default function Sessions({ api, post, onOpen, onDirtyChange }) {
     h(
       "label",
       null,
-      "Trợ lý cho cuộc trò chuyện mới",
+      uiText("Trợ lý cho cuộc trò chuyện mới"),
       h(
         "select",
         { value: agent, onChange: (e) => setAgent(e.target.value) },
-        h("option", { value: "" }, "Trợ lý mặc định"),
+        h("option", { value: "" }, uiText("Trợ lý mặc định")),
         ...agents
           .filter((a) => a.enabled)
           .map((a) => h("option", { key: a.id, value: a.id }, a.title)),
@@ -158,21 +159,21 @@ export default function Sessions({ api, post, onOpen, onDirtyChange }) {
           style: { padding: "16px 0", borderBottom: "1px solid #555" },
         },
         h("strong", null, s.title),
-        h("button", { onClick: () => onOpen(s), disabled: s.archived }, "Mở"),
+        h("button", { onClick: () => onOpen(s), disabled: s.archived }, uiText("Mở")),
         h(
           "button",
           { onClick: () => run(() => update(s, { pinned: !s.pinned })) },
-          s.pinned ? "Bỏ ghim" : "Ghim",
+          s.pinned ? uiText("Bỏ ghim") : uiText("Ghim"),
         ),
         h(
           "button",
           {
             onClick: () => {
-              const name = window.prompt("Tên cuộc trò chuyện", s.title);
+              const name = window.prompt(uiText("Tên cuộc trò chuyện"), s.title);
               if (name?.trim()) run(() => update(s, { title: name.trim() }));
             },
           },
-          "Đổi tên",
+          uiText("Đổi tên"),
         ),
         h(
           "button",
@@ -181,7 +182,7 @@ export default function Sessions({ api, post, onOpen, onDirtyChange }) {
               if (mayDiscard()) run(() => update(s, { archived: !s.archived }));
             },
           },
-          s.archived ? "Khôi phục" : "Lưu trữ",
+          s.archived ? uiText("Khôi phục") : uiText("Lưu trữ"),
         ),
         h(ContextPanel, {
           session: s,
@@ -196,7 +197,7 @@ export default function Sessions({ api, post, onOpen, onDirtyChange }) {
         h(
           "a",
           { href: `/api/workspace/sessions/${s.id}/export`, download: true },
-          "Xuất JSON",
+          uiText("Xuất JSON"),
         ),
         h(
           "button",
@@ -204,7 +205,7 @@ export default function Sessions({ api, post, onOpen, onDirtyChange }) {
             onClick: () => {
               if (
                 window.confirm(
-                  "Tạo liên kết đọc toàn bộ nội dung cuộc trò chuyện trong 7 ngày? Bất kỳ ai có liên kết đều đọc được bản chụp này. Hãy kiểm tra thông tin riêng tư trước khi chia sẻ.",
+                  uiText("Tạo liên kết đọc toàn bộ nội dung cuộc trò chuyện trong 7 ngày? Bất kỳ ai có liên kết đều đọc được bản chụp này. Hãy kiểm tra thông tin riêng tư trước khi chia sẻ."),
                 )
               )
                 run(async () => {
@@ -216,7 +217,7 @@ export default function Sessions({ api, post, onOpen, onDirtyChange }) {
                 });
             },
           },
-          "Tạo liên kết chia sẻ",
+          uiText("Tạo liên kết chia sẻ"),
         ),
       ),
     ),
@@ -224,43 +225,43 @@ export default function Sessions({ api, post, onOpen, onDirtyChange }) {
       h(
         "p",
         null,
-        "Liên kết mới: ",
+        uiText("Liên kết mới: "),
         h(
           "a",
           { href: shareURL, target: "_blank", rel: "noreferrer" },
           location.origin + shareURL,
         ),
       ),
-    h("h3", null, "Liên kết đã tạo"),
+    h("h3", null, uiText("Liên kết đã tạo")),
     ...shares.map((s) =>
       h(
         "p",
         { key: s.id },
-        `${s.title} · ${s.revoked ? "Đã thu hồi" : new Date(s.expires * 1000).toLocaleString()}`,
+        `${s.title} · ${s.revoked ? uiText("Đã thu hồi") : new Date(s.expires * 1000).toLocaleString()}`,
         !s.revoked &&
           h(
             "button",
             { onClick: () => run(() => post(`/shares/${s.id}`, {}, "DELETE")) },
-            "Thu hồi",
+            uiText("Thu hồi"),
           ),
       ),
     ),
-    h("h3", null, "Tạo dự án"),
+    h("h3", null, uiText("Tạo dự án")),
     h(
       "p",
       null,
-      "Bối cảnh dự án được dùng cho các cuộc trò chuyện thuộc dự án. Các liên kết và nội dung là tài liệu tham khảo.",
+      uiText("Bối cảnh dự án được dùng cho các cuộc trò chuyện thuộc dự án. Các liên kết và nội dung là tài liệu tham khảo."),
     ),
     h(
       "label",
       null,
-      "Tên dự án",
+      uiText("Tên dự án"),
       h("input", { value: title, onChange: (e) => setTitle(e.target.value) }),
     ),
     h(
       "label",
       null,
-      "Bối cảnh",
+      uiText("Bối cảnh"),
       h("textarea", {
         value: context,
         onChange: (e) => setContext(e.target.value),
@@ -279,7 +280,7 @@ export default function Sessions({ api, post, onOpen, onDirtyChange }) {
             setContext("");
           }),
       },
-      "Lưu dự án",
+      uiText("Lưu dự án"),
     ),
     ...projects.map((p) =>
       h(
@@ -291,7 +292,7 @@ export default function Sessions({ api, post, onOpen, onDirtyChange }) {
           "button",
           {
             onClick: () => {
-              const value = window.prompt("Bối cảnh dự án", p.context);
+              const value = window.prompt(uiText("Bối cảnh dự án"), p.context);
               if (value !== null)
                 run(() =>
                   post(
@@ -302,7 +303,7 @@ export default function Sessions({ api, post, onOpen, onDirtyChange }) {
                 );
             },
           },
-          "Sửa bối cảnh",
+          uiText("Sửa bối cảnh"),
         ),
       ),
     ),

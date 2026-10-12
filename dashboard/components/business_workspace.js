@@ -1,18 +1,19 @@
+import { t as uiText, localeTag } from "../i18n/runtime.js";
 import React, { useEffect, useState } from "react";
 const h = React.createElement;
 const TABS = {
-  channels: "Đa kênh",
-  inbox: "Hộp thư",
+  get channels() { return uiText("Đa kênh"); },
+  get inbox() { return uiText("Hộp thư"); },
   customers: "Customer 360",
   campaigns: "Marketing",
-  sales: "Bán hàng",
-  tickets: "CSKH / Ticket",
-  ledger: "Thu chi",
-  staff: "Nhân sự",
+  get sales() { return uiText("Bán hàng"); },
+  get tickets() { return uiText("CSKH / Ticket"); },
+  get ledger() { return uiText("Thu chi"); },
+  get staff() { return uiText("Nhân sự"); },
   analytics: "Analytics",
 };
 const money = (n) =>
-  new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
+  new Intl.NumberFormat(localeTag(), { style: "currency", currency: "VND" }).format(
     n || 0,
   );
 export default function BusinessWorkspace({
@@ -59,7 +60,7 @@ export default function BusinessWorkspace({
       await load();
       await onPending();
       if (r?.status === "requires_confirmation")
-        setNotice("Đã chuyển yêu cầu sang Phê duyệt.");
+        setNotice(uiText("Đã chuyển yêu cầu sang Phê duyệt."));
       return r;
     } catch (e) {
       setError(e.message);
@@ -101,13 +102,13 @@ export default function BusinessWorkspace({
   const customerSelect = () =>
     select(
       "customer_id",
-      "Khách hàng",
+      uiText("Khách hàng"),
       customers.map((c) => [c.id, c.name]),
     );
   const channelSelect = () =>
     select(
       "channel",
-      "Kênh",
+      uiText("Kênh"),
       Object.entries({
         zalo: "Zalo OA",
         facebook: "Facebook",
@@ -133,7 +134,7 @@ export default function BusinessWorkspace({
       },
       h("h3", null, title),
       ...fields,
-      h("button", { className: "primary", disabled: busy }, "Lưu"),
+      h("button", { className: "primary", disabled: busy }, uiText("Lưu")),
     );
   const cards = (rows, render) =>
     h(
@@ -142,7 +143,7 @@ export default function BusinessWorkspace({
       ...rows.map((r) =>
         h("article", { className: "panel", key: r.id }, ...render(r)),
       ),
-      !rows.length && h("p", { className: "muted" }, "Chưa có dữ liệu."),
+      !rows.length && h("p", { className: "muted" }, uiText("Chưa có dữ liệu.")),
     );
   let content = null;
   if (data && tab === "channels")
@@ -152,7 +153,7 @@ export default function BusinessWorkspace({
       h(
         "p",
         { className: "muted" },
-        "MCP được kiểm tra tại Hub. Kiểm tra công cụ thành công chưa xác nhận quyền truy cập tài khoản. Cần OAuth/API và máy chủ MCP phù hợp trước khi sử dụng.",
+        uiText("MCP được kiểm tra tại Hub. Kiểm tra công cụ thành công chưa xác nhận quyền truy cập tài khoản. Cần OAuth/API và máy chủ MCP phù hợp trước khi sử dụng."),
       ),
       cards(data.channels, (c) => {
         const official = data.official_catalog.find((o) => o.id === c.id);
@@ -166,21 +167,21 @@ export default function BusinessWorkspace({
             h(
               "a",
               { href: official.source, target: "_blank", rel: "noreferrer" },
-              "Tài liệu chính thức ↗",
+              uiText("Tài liệu chính thức ↗"),
             ),
           official?.template &&
-            button("Mở mẫu MCP", () => onConfigure(official.template)),
+            button(uiText("Mở mẫu MCP"), () => onConfigure(official.template)),
           c.connector &&
-            button("Kiểm tra MCP", async () => {
+            button(uiText("Kiểm tra MCP"), async () => {
               const r = await post("/business/channels/" + c.id + "/test", {});
               setNotice(
                 r.mcp_reachable
-                  ? "MCP phản hồi; cần kiểm tra tài khoản riêng."
-                  : "Công cụ chưa khớp cấu hình.",
+                  ? uiText("MCP phản hồi; cần kiểm tra tài khoản riêng.")
+                  : uiText("Công cụ chưa khớp cấu hình."),
               );
             }),
           c.read_tool &&
-            button("Đọc qua MCP", async () => {
+            button(uiText("Đọc qua MCP"), async () => {
               const r = await post("/business/channels/" + c.id + "/read", {
                 arguments: {},
               });
@@ -189,16 +190,16 @@ export default function BusinessWorkspace({
         ];
       }),
       form(
-        "Ánh xạ kênh → MCP",
+        uiText("Ánh xạ kênh → MCP"),
         [
           channelSelect(),
-          field("connector", "ID connector MCP đã lưu"),
-          field("read_tool", "Công cụ đọc", "text", false),
-          field("send_tool", "Công cụ gửi", "text", false),
+          field("connector", uiText("ID connector MCP đã lưu")),
+          field("read_tool", uiText("Công cụ đọc"), "text", false),
+          field("send_tool", uiText("Công cụ gửi"), "text", false),
           h(
             "label",
             null,
-            "Mẫu JSON tham số gửi ($recipient, $content)",
+            uiText("Mẫu JSON tham số gửi ($recipient, $content)"),
             h("textarea", {
               name: "template",
               defaultValue: '{"recipient":"$recipient","content":"$content"}',
@@ -206,7 +207,7 @@ export default function BusinessWorkspace({
           ),
           field(
             "webhook_secret",
-            "Khóa webhook bridge ≥32 ký tự",
+            uiText("Khóa webhook bridge ≥32 ký tự"),
             "password",
             false,
           ),
@@ -231,11 +232,11 @@ export default function BusinessWorkspace({
       React.Fragment,
       null,
       form(
-        "Tạo khách hàng",
+        uiText("Tạo khách hàng"),
         [
-          field("name", "Tên khách hàng"),
+          field("name", uiText("Tên khách hàng")),
           field("email", "Email", "email", false),
-          field("phone", "Điện thoại", "text", false),
+          field("phone", uiText("Điện thoại"), "text", false),
         ],
         (v) => post("/business/customers", v),
       ),
@@ -245,9 +246,9 @@ export default function BusinessWorkspace({
         h(
           "p",
           null,
-          `${c.stage} · ${c.message_count} tin nhắn · ${money(c.revenue)}`,
+          uiText("{0} · {1} tin nhắn · {2}", [c.stage, c.message_count, money(c.revenue)]),
         ),
-        button("Hồ sơ 360", async () =>
+        button(uiText("Hồ sơ 360"), async () =>
           setDetail(await api("/business/customers/" + c.id)),
         ),
       ]),
@@ -259,27 +260,27 @@ export default function BusinessWorkspace({
           h(
             "p",
             null,
-            `${detail.messages.length} tin nhắn · ${detail.sales.length} báo giá/đơn · ${detail.tickets.length} ticket`,
+            uiText("{0} tin nhắn · {1} báo giá/đơn · {2} ticket", [detail.messages.length, detail.sales.length, detail.tickets.length]),
           ),
           ...detail.messages.map((m) =>
             h("p", { key: m.id }, `${m.channel}: ${m.content}`),
           ),
           form(
-            "Cập nhật vòng đời",
+            uiText("Cập nhật vòng đời"),
             [
-              select("stage", "Giai đoạn", [
+              select("stage", uiText("Giai đoạn"), [
                 ["lead", "Lead"],
-                ["prospect", "Tiềm năng"],
-                ["customer", "Khách hàng"],
-                ["loyal", "Trung thành"],
+                ["prospect", uiText("Tiềm năng")],
+                ["customer", uiText("Khách hàng")],
+                ["loyal", uiText("Trung thành")],
               ]),
-              field("notes", "Ghi chú", "text", false),
+              field("notes", uiText("Ghi chú"), "text", false),
             ],
             (v) => post("/business/customers/" + detail.id, v, "PATCH"),
           ),
           form(
-            "Gắn định danh kênh",
-            [channelSelect(), field("external_id", "ID khách trên nền tảng")],
+            uiText("Gắn định danh kênh"),
+            [channelSelect(), field("external_id", uiText("ID khách trên nền tảng"))],
             (v) => post("/business/customers/" + detail.id + "/identities", v),
           ),
         ),
@@ -289,23 +290,23 @@ export default function BusinessWorkspace({
       React.Fragment,
       null,
       form(
-        "Nhập tin nhắn thủ công",
+        uiText("Nhập tin nhắn thủ công"),
         [
           channelSelect(),
-          field("external_id", "ID tin nhắn"),
-          field("sender_id", "ID người gửi"),
-          field("sender_name", "Tên người gửi"),
-          field("content", "Nội dung"),
+          field("external_id", uiText("ID tin nhắn")),
+          field("sender_id", uiText("ID người gửi")),
+          field("sender_name", uiText("Tên người gửi")),
+          field("content", uiText("Nội dung")),
         ],
         ({ channel, ...v }) =>
           post("/business/inbox/" + channel + "/import", v),
       ),
       form(
-        "Soạn phản hồi",
+        uiText("Soạn phản hồi"),
         [
           channelSelect(),
-          field("recipient", "ID người nhận"),
-          field("content", "Nội dung"),
+          field("recipient", uiText("ID người nhận")),
+          field("content", uiText("Nội dung")),
         ],
         (v) => post("/business/inbox/drafts", v),
       ),
@@ -318,7 +319,7 @@ export default function BusinessWorkspace({
         ),
         h("p", null, m.content),
         m.status === "draft" &&
-          button("Gửi qua MCP", () =>
+          button(uiText("Gửi qua MCP"), () =>
             post("/business/inbox/" + m.id + "/send", {}),
           ),
       ]),
@@ -328,12 +329,12 @@ export default function BusinessWorkspace({
       React.Fragment,
       null,
       form(
-        "Chiến dịch đa kênh",
+        uiText("Chiến dịch đa kênh"),
         [
-          field("title", "Tên chiến dịch"),
-          field("objective", "Mục tiêu"),
-          field("channels", "Kênh, phân cách dấu phẩy"),
-          field("budget", "Ngân sách VND", "number"),
+          field("title", uiText("Tên chiến dịch")),
+          field("objective", uiText("Mục tiêu")),
+          field("channels", uiText("Kênh, phân cách dấu phẩy")),
+          field("budget", uiText("Ngân sách VND"), "number"),
         ],
         (v) =>
           post("/business/campaigns", {
@@ -350,24 +351,24 @@ export default function BusinessWorkspace({
           null,
           `${c.channels.join(" · ")} / ${money(c.budget)} / ${c.status}`,
         ),
-        button("Lập kế hoạch bằng AI", () =>
+        button(uiText("Lập kế hoạch bằng AI"), () =>
           onAskAI(
-            `Lập kế hoạch cho chiến dịch ${c.title}. Mục tiêu: ${c.objective}. Kênh: ${c.channels.join(", ")}. Ngân sách: ${c.budget} VND. Tạo lịch triển khai, nội dung và chỉ số đo lường.`,
+            uiText("Lập kế hoạch cho chiến dịch {0}. Mục tiêu: {1}. Kênh: {2}. Ngân sách: {3} VND. Tạo lịch triển khai, nội dung và chỉ số đo lường.", [c.title, c.objective, c.channels.join(", "), c.budget]),
           ),
         ),
         form(
-          "Lưu kế hoạch",
+          uiText("Lưu kế hoạch"),
           [
             h(
               "label",
               null,
-              "Kế hoạch",
+              uiText("Kế hoạch"),
               h("textarea", { name: "plan", defaultValue: c.plan }),
             ),
-            select("status", "Trạng thái", [
-              ["draft", "Nháp"],
-              ["planned", "Đã lập kế hoạch"],
-              ["done", "Hoàn thành"],
+            select("status", uiText("Trạng thái"), [
+              ["draft", uiText("Nháp")],
+              ["planned", uiText("Đã lập kế hoạch")],
+              ["done", uiText("Hoàn thành")],
             ]),
           ],
           (v) => post("/business/campaigns/" + c.id, v, "PATCH"),
@@ -379,13 +380,13 @@ export default function BusinessWorkspace({
       React.Fragment,
       null,
       form(
-        "Tạo báo giá",
+        uiText("Tạo báo giá"),
         [
           customerSelect(),
-          field("title", "Tên báo giá"),
-          field("item", "Sản phẩm / Dịch vụ"),
-          field("quantity", "Số lượng", "number"),
-          field("unit_price", "Đơn giá VND", "number"),
+          field("title", uiText("Tên báo giá")),
+          field("item", uiText("Sản phẩm / Dịch vụ")),
+          field("quantity", uiText("Số lượng"), "number"),
+          field("unit_price", uiText("Đơn giá VND"), "number"),
         ],
         (v) =>
           post("/business/sales", {
@@ -406,11 +407,11 @@ export default function BusinessWorkspace({
         h("strong", null, money(s.total)),
         h("p", null, s.status),
         s.status === "quote" &&
-          button("Chuyển thành đơn", () =>
+          button(uiText("Chuyển thành đơn"), () =>
             post("/business/sales/" + s.id, { status: "order" }, "PATCH"),
           ),
         s.status === "order" &&
-          button("Ghi nhận đã thu tiền", () =>
+          button(uiText("Ghi nhận đã thu tiền"), () =>
             post("/business/sales/" + s.id, { status: "paid" }, "PATCH"),
           ),
       ]),
@@ -420,13 +421,13 @@ export default function BusinessWorkspace({
       React.Fragment,
       null,
       form(
-        "Tạo ticket hỗ trợ",
+        uiText("Tạo ticket hỗ trợ"),
         [
-          field("title", "Tiêu đề"),
-          field("description", "Mô tả", "text", false),
-          select("priority", "Ưu tiên", [
-            ["normal", "Thường"],
-            ["high", "Cao"],
+          field("title", uiText("Tiêu đề")),
+          field("description", uiText("Mô tả"), "text", false),
+          select("priority", uiText("Ưu tiên"), [
+            ["normal", uiText("Thường")],
+            ["high", uiText("Cao")],
           ]),
         ],
         (v) => post("/business/tickets", v),
@@ -436,7 +437,7 @@ export default function BusinessWorkspace({
         h("p", null, t.description),
         h("p", null, t.priority + " · " + t.status),
         t.status !== "resolved" &&
-          button("Giải quyết", () =>
+          button(uiText("Giải quyết"), () =>
             post("/business/tickets/" + t.id, { status: "resolved" }, "PATCH"),
           ),
       ]),
@@ -448,17 +449,17 @@ export default function BusinessWorkspace({
       h(
         "p",
         { className: "muted" },
-        "Sổ thu chi nội bộ VND. Ghi nhận thanh toán thủ công; chưa đối soát ngân hàng hoặc phát hành hóa đơn thuế.",
+        uiText("Sổ thu chi nội bộ VND. Ghi nhận thanh toán thủ công; chưa đối soát ngân hàng hoặc phát hành hóa đơn thuế."),
       ),
       form(
         "Ghi thu / chi",
         [
-          select("direction", "Loại", [
+          select("direction", uiText("Loại"), [
             ["income", "Thu"],
             ["expense", "Chi"],
           ]),
-          field("amount", "Số tiền VND", "number"),
-          field("description", "Diễn giải"),
+          field("amount", uiText("Số tiền VND"), "number"),
+          field("description", uiText("Diễn giải")),
         ],
         (v) => post("/business/ledger", { ...v, amount: Number(v.amount) }),
       ),
@@ -476,10 +477,10 @@ export default function BusinessWorkspace({
       React.Fragment,
       null,
       form(
-        "Thành viên / Cộng tác viên",
+        uiText("Thành viên / Cộng tác viên"),
         [
-          field("name", "Họ tên"),
-          field("role", "Vai trò"),
+          field("name", uiText("Họ tên")),
+          field("role", uiText("Vai trò")),
           field("email", "Email", "email", false),
         ],
         (v) => post("/business/staff", v),
@@ -489,7 +490,7 @@ export default function BusinessWorkspace({
         h("p", null, s.role),
         h("p", null, s.email),
         h("p", null, s.status),
-        button(s.status === "active" ? "Tạm nghỉ" : "Kích hoạt", () =>
+        button(s.status === "active" ? uiText("Tạm nghỉ") : uiText("Kích hoạt"), () =>
           post(
             "/business/staff/" + s.id,
             { status: s.status === "active" ? "leave" : "active" },
@@ -506,12 +507,12 @@ export default function BusinessWorkspace({
         "div",
         { className: "business-grid" },
         ...Object.entries({
-          customers: "Khách hàng",
-          paid_orders: "Đơn đã thu",
-          open_tickets: "Ticket đang mở",
-          income: "Tổng thu",
-          expense: "Tổng chi",
-          balance: "Chênh lệch thu chi",
+          customers: uiText("Khách hàng"),
+          paid_orders: uiText("Đơn đã thu"),
+          open_tickets: uiText("Ticket đang mở"),
+          income: uiText("Tổng thu"),
+          expense: uiText("Tổng chi"),
+          balance: uiText("Chênh lệch thu chi"),
         }).map(([key, label]) =>
           h(
             "article",
@@ -530,11 +531,11 @@ export default function BusinessWorkspace({
       h(
         "section",
         { className: "panel" },
-        h("h3", null, "Tin nhắn theo kênh"),
+        h("h3", null, uiText("Tin nhắn theo kênh")),
         ...data.channels.map((c) =>
           h("p", { key: c.channel }, `${c.channel}: ${c.messages}`),
         ),
-        h("h3", null, "Vòng đời khách hàng"),
+        h("h3", null, uiText("Vòng đời khách hàng")),
         ...data.stages.map((s) =>
           h("p", { key: s.stage }, `${s.stage}: ${s.count}`),
         ),
@@ -544,7 +545,7 @@ export default function BusinessWorkspace({
     "section",
     null,
     h("span", { className: "eyebrow" }, "ONE PERSON COMPANY"),
-    h("h1", null, "Điều hành doanh nghiệp"),
+    h("h1", null, uiText("Điều hành doanh nghiệp")),
     h(
       "div",
       { className: "business-tabs" },
@@ -568,7 +569,7 @@ export default function BusinessWorkspace({
     ),
     error && h("p", { role: "alert", className: "error" }, error),
     notice && h("p", { role: "status", className: "notice" }, notice),
-    !data && h("p", null, "Đang tải…"),
+    !data && h("p", null, uiText("Đang tải…")),
     content,
   );
 }

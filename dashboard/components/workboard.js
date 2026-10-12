@@ -1,3 +1,4 @@
+import { t as uiText, localeTag } from "../i18n/runtime.js";
 import React, { useEffect, useState } from "react";
 import { useUnsaved } from "./use_unsaved.js";
 const h = React.createElement;
@@ -9,12 +10,12 @@ const initial = {
   project_id: null,
   agent_id: null,
 };
-const states = { todo: "Cần làm", doing: "Đang làm", done: "Hoàn tất" },
+const states = { get todo() { return uiText("Cần làm"); }, get doing() { return uiText("Đang làm"); }, get done() { return uiText("Hoàn tất"); } },
   priorities = {
-    urgent: "Khẩn cấp",
-    high: "Cao",
-    normal: "Bình thường",
-    low: "Thấp",
+    get urgent() { return uiText("Khẩn cấp"); },
+    get high() { return uiText("Cao"); },
+    get normal() { return uiText("Bình thường"); },
+    get low() { return uiText("Thấp"); },
   };
 export default function Workboard({ api, post, onDirtyChange, onSaved }) {
   const [tasks, setTasks] = useState([]),
@@ -93,14 +94,14 @@ export default function Workboard({ api, post, onDirtyChange, onSaved }) {
           });
         },
       },
-      h("h2", null, id ? "Sửa công việc" : "Lập công việc"),
+      h("h2", null, id ? uiText("Sửa công việc") : uiText("Lập công việc")),
       h(
         "fieldset",
         { disabled: busy },
         h(
           "label",
           null,
-          "Tên công việc",
+          uiText("Tên công việc"),
           h("input", {
             value: draft.title,
             required: true,
@@ -111,11 +112,11 @@ export default function Workboard({ api, post, onDirtyChange, onSaved }) {
         h(
           "details",
           null,
-          h("summary", null, "Chi tiết, ưu tiên & phân công"),
+          h("summary", null, uiText("Chi tiết, ưu tiên & phân công")),
           h(
             "label",
             null,
-            "Mô tả công việc",
+            uiText("Mô tả công việc"),
             h("textarea", {
               value: draft.description,
               rows: 4,
@@ -128,7 +129,7 @@ export default function Workboard({ api, post, onDirtyChange, onSaved }) {
             h(
               "label",
               null,
-              "Mức ưu tiên",
+              uiText("Mức ưu tiên"),
               h(
                 "select",
                 {
@@ -143,7 +144,7 @@ export default function Workboard({ api, post, onDirtyChange, onSaved }) {
             h(
               "label",
               null,
-              "Hạn hoàn thành",
+              uiText("Hạn hoàn thành"),
               h("input", {
                 type: "date",
                 value: draft.due || "",
@@ -153,7 +154,7 @@ export default function Workboard({ api, post, onDirtyChange, onSaved }) {
             h(
               "label",
               null,
-              "Dự án công việc",
+              uiText("Dự án công việc"),
               h(
                 "select",
                 {
@@ -161,7 +162,7 @@ export default function Workboard({ api, post, onDirtyChange, onSaved }) {
                   onChange: (e) =>
                     patch({ project_id: e.target.value || null }),
                 },
-                h("option", { value: "" }, "Không gắn dự án"),
+                h("option", { value: "" }, uiText("Không gắn dự án")),
                 ...projects.map((p) =>
                   h("option", { key: p.id, value: p.id }, p.title),
                 ),
@@ -170,14 +171,14 @@ export default function Workboard({ api, post, onDirtyChange, onSaved }) {
             h(
               "label",
               null,
-              "Trợ lý phụ trách",
+              uiText("Trợ lý phụ trách"),
               h(
                 "select",
                 {
                   value: draft.agent_id || "",
                   onChange: (e) => patch({ agent_id: e.target.value || null }),
                 },
-                h("option", { value: "" }, "Chủ doanh nghiệp"),
+                h("option", { value: "" }, uiText("Chủ doanh nghiệp")),
                 ...agents
                   .filter((a) => a.enabled)
                   .map((a) => h("option", { key: a.id, value: a.id }, a.title)),
@@ -187,7 +188,7 @@ export default function Workboard({ api, post, onDirtyChange, onSaved }) {
           h(
             "small",
             { className: "muted" },
-            "Phân công để theo dõi; không tự khởi chạy AI hay công cụ.",
+            uiText("Phân công để theo dõi; không tự khởi chạy AI hay công cụ."),
           ),
         ),
         h(
@@ -196,7 +197,7 @@ export default function Workboard({ api, post, onDirtyChange, onSaved }) {
           h(
             "button",
             { type: "submit", className: "primary" },
-            id ? "Lưu công việc" : "Thêm việc",
+            id ? uiText("Lưu công việc") : uiText("Thêm việc"),
           ),
           id &&
             h(
@@ -210,7 +211,7 @@ export default function Workboard({ api, post, onDirtyChange, onSaved }) {
                   setId(null);
                 },
               },
-              "Hủy sửa",
+              uiText("Hủy sửa"),
             ),
         ),
       ),
@@ -221,7 +222,7 @@ export default function Workboard({ api, post, onDirtyChange, onSaved }) {
       h(
         "label",
         null,
-        "Tìm công việc",
+        uiText("Tìm công việc"),
         h("input", {
           type: "search",
           value: query,
@@ -231,11 +232,11 @@ export default function Workboard({ api, post, onDirtyChange, onSaved }) {
       h(
         "label",
         null,
-        "Lọc dự án",
+        uiText("Lọc dự án"),
         h(
           "select",
           { value: filter, onChange: (e) => setFilter(e.target.value) },
-          h("option", { value: "" }, "Tất cả dự án"),
+          h("option", { value: "" }, uiText("Tất cả dự án")),
           ...projects.map((p) =>
             h("option", { key: p.id, value: p.id }, p.title),
           ),
@@ -270,19 +271,19 @@ export default function Workboard({ api, post, onDirtyChange, onSaved }) {
                   priorities[t.priority],
                 ),
                 t.description && h("p", null, t.description),
-                t.due && h("small", null, "Hạn: " + t.due),
+                t.due && h("small", null, uiText("Hạn: ") + t.due),
                 t.agent_id &&
                   h(
                     "small",
                     null,
-                    "Trợ lý: " +
+                    uiText("Trợ lý: ") +
                       (agents.find((a) => a.id === t.agent_id)?.title ||
-                        "Không còn hoạt động"),
+                        uiText("Không còn hoạt động")),
                   ),
                 h(
                   "select",
                   {
-                    "aria-label": "Trạng thái " + t.title,
+                    "aria-label": uiText("Trạng thái ") + t.title,
                     value: t.state,
                     disabled: busy,
                     onChange: (e) =>
@@ -315,7 +316,7 @@ export default function Workboard({ api, post, onDirtyChange, onSaved }) {
                       setBaseline(JSON.stringify(value));
                     },
                   },
-                  "Sửa công việc",
+                  uiText("Sửa công việc"),
                 ),
               ),
             ),

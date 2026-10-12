@@ -1,3 +1,5 @@
+import { useLocale } from "../i18n/runtime.js";
+import { t as uiText, localeTag } from "../i18n/runtime.js";
 import React, { useEffect, useRef, useState } from "react";
 import { useUnsaved } from "./use_unsaved.js";
 const h = React.createElement;
@@ -8,6 +10,7 @@ export default function SiteSettings({
   disabled,
   onDirtyChange,
 }) {
+  const [locale] = useLocale();
   const [site, setSite] = useState(null),
     [themes, setThemes] = useState([]),
     [error, setError] = useState(""),
@@ -41,6 +44,11 @@ export default function SiteSettings({
       })
       .catch((e) => setError(e.message));
   }, []);
+  useEffect(() => {
+    let active = true;
+    api("/cms/themes").then(items => { if (active) setThemes(items); }).catch(e => setError(e.message));
+    return () => { active = false; };
+  }, [locale]);
   async function run(fn) {
     setBusy(true);
     setError("");
@@ -58,29 +66,29 @@ export default function SiteSettings({
   return h(
     "details",
     { className: "card" },
-    h("summary", null, "Giao diện & thông tin website"),
+    h("summary", null, uiText("Giao diện & thông tin website")),
     h(
       "p",
       null,
-      "Trang chủ dành cho khách. Quản trị tại /admin. Mẫu được tạo thành bản nháp để bạn chỉnh sửa và xuất bản.",
+      uiText("Trang chủ dành cho khách. Quản trị tại /admin. Mẫu được tạo thành bản nháp để bạn chỉnh sửa và xuất bản."),
     ),
     error && h("p", { role: "alert" }, error),
     notice && h("p", { role: "status" }, notice),
-    preview && h("dialog", {ref: dialogRef, onCancel: () => setPreview(null), className: "theme-preview-dialog", "aria-label": `Xem trước ${preview.title}`},
+    preview && h("dialog", {ref: dialogRef, onCancel: () => setPreview(null), className: "theme-preview-dialog", "aria-label": uiText("Xem trước {0}", [preview.title])},
       h("div", {className: "theme-preview-toolbar"},
         h("strong", null, preview.title),
-        h("button", {type: "button", onClick: () => setMobile(false), "aria-pressed": !mobile}, "Máy tính"),
-        h("button", {type: "button", onClick: () => setMobile(true), "aria-pressed": mobile}, "Điện thoại"),
-        h("button", {type: "button", onClick: () => setPreview(null)}, "Đóng xem trước")),
-      h("p", null, "Bản mẫu dùng nội dung minh họa. Xem trước không thay đổi website."),
-      h("div", {className: "theme-preview-stage"}, h("iframe", {title: `Bản xem trước ${preview.title}`, srcDoc: previews[preview.id], sandbox: "", style: {width: mobile ? "390px" : "100%"}}))),
+        h("button", {type: "button", onClick: () => setMobile(false), "aria-pressed": !mobile}, uiText("Máy tính")),
+        h("button", {type: "button", onClick: () => setMobile(true), "aria-pressed": mobile}, uiText("Điện thoại")),
+        h("button", {type: "button", onClick: () => setPreview(null)}, uiText("Đóng xem trước"))),
+      h("p", null, uiText("Bản mẫu dùng nội dung minh họa. Xem trước không thay đổi website.")),
+      h("div", {className: "theme-preview-stage"}, h("iframe", {title: uiText("Bản xem trước {0}", [preview.title]), srcDoc: previews[preview.id], sandbox: "", style: {width: mobile ? "390px" : "100%"}}))),
     h(
       "fieldset",
       { disabled: disabled || busy },
       h(
         "label",
         null,
-        "Tên website",
+        uiText("Tên website"),
         h("input", {
           value: site.title,
           onChange: (e) => setSite({ ...site, title: e.target.value }),
@@ -90,7 +98,7 @@ export default function SiteSettings({
       h(
         "label",
         null,
-        "Lời giới thiệu",
+        uiText("Lời giới thiệu"),
         h("input", {
           value: site.tagline,
           onChange: (e) => setSite({ ...site, tagline: e.target.value }),
@@ -105,7 +113,7 @@ export default function SiteSettings({
           checked: site.registration,
           onChange: (e) => setSite({ ...site, registration: e.target.checked }),
         }),
-        " Cho phép khách đăng ký",
+        uiText(" Cho phép khách đăng ký"),
       ),
       h(
         "div",
@@ -118,10 +126,10 @@ export default function SiteSettings({
               className: "card",
               style: { borderTop: `8px solid ${t.accent}` },
             },
-            h("button", {type: "button", className: "theme-thumbnail", onClick: () => setPreview(t), "aria-label": `Xem trước ${t.title}`},
-              previews[t.id] ? h("iframe", {title: `Hình thu nhỏ ${t.title}`, srcDoc: previews[t.id], sandbox: "", tabIndex: -1, loading: "lazy"}) : "Đang tải hình xem trước…"),
+            h("button", {type: "button", className: "theme-thumbnail", onClick: () => setPreview(t), "aria-label": uiText("Xem trước {0}", [t.title])},
+              previews[t.id] ? h("iframe", {title: uiText("Hình thu nhỏ {0}", [t.title]), srcDoc: previews[t.id], sandbox: "", tabIndex: -1, loading: "lazy"}) : uiText("Đang tải hình xem trước…")),
             h("h3", null, t.title),
-            h("button", {type: "button", onClick: () => setPreview(t)}, "Xem trước"),
+            h("button", {type: "button", onClick: () => setPreview(t)}, uiText("Xem trước")),
             h("p", null, t.headline),
             h(
               "label",
@@ -132,7 +140,7 @@ export default function SiteSettings({
                 checked: site.theme === t.id,
                 onChange: () => setSite({ ...site, theme: t.id }),
               }),
-              " Chọn màu giao diện",
+              uiText(" Chọn màu giao diện"),
             ),
             h(
               "button",
@@ -142,11 +150,11 @@ export default function SiteSettings({
                   run(async () => {
                     if (await onDraft(t.id))
                       setNotice(
-                        "Đã tạo trang nháp. Hãy chỉnh nội dung rồi xuất bản và chọn làm trang chủ.",
+                        uiText("Đã tạo trang nháp. Hãy chỉnh nội dung rồi xuất bản và chọn làm trang chủ."),
                       );
                   }),
               },
-              "Tạo trang từ mẫu",
+              uiText("Tạo trang từ mẫu"),
             ),
           ),
         ),
@@ -160,10 +168,10 @@ export default function SiteSettings({
               const result = await post("/cms/site", site, "PUT");
               setSite(result);
               setSaved(JSON.stringify(result));
-              setNotice("Đã lưu thông tin website.");
+              setNotice(uiText("Đã lưu thông tin website."));
             }),
         },
-        "Lưu thông tin website",
+        uiText("Lưu thông tin website"),
       ),
     ),
   );

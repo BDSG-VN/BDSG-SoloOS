@@ -2,6 +2,8 @@
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from server.core.i18n import t
+
 THEMES = {
     "personal": (
         "Cá nhân & chuyên gia",
@@ -88,6 +90,7 @@ def template(theme, title):
     if theme not in THEMES:
         raise ValueError("Unknown theme")
     label, headline, _, _, sections = THEMES[theme]
+    label, headline, sections = t(label), t(headline), [t(section) for section in sections]
     return {
         "kind": "page",
         "title": title,
@@ -101,10 +104,10 @@ def template(theme, title):
                     {"type": "heading", "text": section},
                     {
                         "type": "paragraph",
-                        "text": "Thay nội dung này bằng thông tin đã kiểm chứng của bạn trước khi xuất bản.",
+                        "text": t("Thay nội dung này bằng thông tin đã kiểm chứng của bạn trước khi xuất bản."),
                     },
                 )
             ],
-            {"type": "button", "text": "Đọc bài viết mới", "href": "/news"},
+            {"type": "button", "text": t("Đọc bài viết mới"), "href": "/news"},
         ],
     }

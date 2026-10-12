@@ -16,6 +16,7 @@ from server.api.security import owner
 from server.config import ROOT
 from server.core.cms import ContentInput
 from server.core.cms_render import document_page, e, layout, news_page
+from server.core.i18n import static_html, t
 from server.core.site import THEMES, SiteSettings, save_settings, template
 from server.core.site import settings as site_settings
 
@@ -293,7 +294,7 @@ def home(request: Request):
         if doc
         else layout(
             site.title,
-            f'<section class="hero"><h1>{e(site.title)}</h1><p>{e(site.tagline)}</p><a class="button" href="/news">Khám phá bài viết</a></section>',
+            f'<section class="hero"><h1>{e(site.title)}</h1><p>{e(site.tagline)}</p><a class="button" href="/news">{t("Khám phá bài viết")}</a></section>',
             site=site,
         )
     )
@@ -312,7 +313,7 @@ def put_site(body: SiteSettings, request: Request):
 @router.get("/themes")
 def themes():
     return [
-        {"id": key, "title": item[0], "headline": item[1], "accent": item[2], "paper": item[3]}
+        {"id": key, "title": t(item[0]), "headline": t(item[1]), "accent": item[2], "paper": item[3]}
         for key, item in THEMES.items()
     ]
 
@@ -356,10 +357,10 @@ def search_public(request: Request, q: str = ""):
         f'<article class="card"><h2><a href="/{"news" if doc["kind"] == "post" else "pages"}/{e(doc["slug"])}">{e(doc["title"])}</a></h2><p>{e(doc.get("excerpt", ""))}</p></article>'
         for doc in found
     )
-    form = f'<h1>Tìm kiếm</h1><form method="get"><label>Từ khóa <input name="q" maxlength="200" value="{e(query)}"></label><button>Tìm kiếm</button></form>'
+    form = f'<h1>{t("Tìm kiếm")}</h1><form method="get"><label>{t("Từ khóa")}<input name="q" maxlength="200" value="{e(query)}"></label><button>{t("Tìm kiếm")}</button></form>'
     return layout(
-        "Tìm kiếm",
-        form + '<div class="cards">' + (cards or "<p>Chưa có kết quả phù hợp.</p>") + "</div>",
+        t("Tìm kiếm"),
+        form + '<div class="cards">' + (cards or static_html("<p>Chưa có kết quả phù hợp.</p>")) + "</div>",
         site=site_settings(request.app.state.cms),
     )
 

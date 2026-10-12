@@ -1,3 +1,4 @@
+import { t as uiText, localeTag } from "../i18n/runtime.js";
 import React, { useState, useCallback } from "react";
 import { useUnsaved } from "./use_unsaved.js";
 const h = React.createElement;
@@ -39,11 +40,11 @@ export default function ContextPanel({
   return h(
     "details",
     { className: "context-panel" },
-    h("summary", null, "Bối cảnh & tóm tắt"),
+    h("summary", null, uiText("Bối cảnh & tóm tắt")),
     h(
       "p",
       { className: "muted" },
-      "Giới hạn phần lịch sử gửi vào mỗi lượt AI; toàn bộ cuộc trò chuyện gốc vẫn được giữ. Tóm tắt AI cần bạn kiểm tra trước khi lưu.",
+      uiText("Giới hạn phần lịch sử gửi vào mỗi lượt AI; toàn bộ cuộc trò chuyện gốc vẫn được giữ. Tóm tắt AI cần bạn kiểm tra trước khi lưu."),
     ),
     error && h("p", { role: "alert" }, error),
     notice && h("p", { role: "status" }, notice),
@@ -53,7 +54,7 @@ export default function ContextPanel({
       h(
         "label",
         null,
-        "Giới hạn lịch sử (ký tự, không phải token)",
+        uiText("Giới hạn lịch sử (ký tự, không phải token)"),
         h("input", {
           type: "number",
           min: 4000,
@@ -65,7 +66,7 @@ export default function ContextPanel({
       h(
         "label",
         null,
-        "Tóm tắt đã kiểm tra",
+        uiText("Tóm tắt đã kiểm tra"),
         h("textarea", {
           rows: 5,
           maxLength: 12000,
@@ -86,7 +87,7 @@ export default function ContextPanel({
                 ),
               ),
           },
-          "Kiểm tra bối cảnh",
+          uiText("Kiểm tra bối cảnh"),
         ),
         h(
           "button",
@@ -95,7 +96,7 @@ export default function ContextPanel({
               if (
                 summary &&
                 !window.confirm(
-                  "Thay nội dung tóm tắt đang sửa bằng đề xuất AI mới?",
+                  uiText("Thay nội dung tóm tắt đang sửa bằng đề xuất AI mới?"),
                 )
               )
                 return;
@@ -106,12 +107,12 @@ export default function ContextPanel({
                 );
                 setSummary(result.proposal);
                 setNotice(
-                  "Đề xuất chưa lưu. Đọc lại và bấm Lưu bối cảnh nếu đồng ý.",
+                  uiText("Đề xuất chưa lưu. Đọc lại và bấm Lưu bối cảnh nếu đồng ý."),
                 );
               });
             },
           },
-          "AI đề xuất tóm tắt",
+          uiText("AI đề xuất tóm tắt"),
         ),
         h(
           "button",
@@ -123,10 +124,10 @@ export default function ContextPanel({
                   context_characters: limit,
                 });
                 setBaseline(JSON.stringify([summary, limit]));
-                setNotice("Đã lưu bối cảnh. Lịch sử gốc được giữ nguyên.");
+                setNotice(uiText("Đã lưu bối cảnh. Lịch sử gốc được giữ nguyên."));
               }),
           },
-          "Lưu bối cảnh",
+          uiText("Lưu bối cảnh"),
         ),
       ),
     ),
@@ -134,7 +135,7 @@ export default function ContextPanel({
       h(
         "p",
         { role: "status" },
-        `${stats.characters} ký tự từ ${stats.messages.length}/${stats.sampled} tin gần đây; ${stats.omitted} tin trong mẫu nằm ngoài giới hạn.`,
+        uiText("{0} ký tự từ {1}/{2} tin gần đây; {3} tin trong mẫu nằm ngoài giới hạn.", [stats.characters, stats.messages.length, stats.sampled, stats.omitted]),
       ),
   );
 }

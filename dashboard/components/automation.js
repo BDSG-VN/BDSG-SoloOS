@@ -1,3 +1,4 @@
+import { t as uiText, localeTag } from "../i18n/runtime.js";
 import React, { useEffect, useState } from "react";
 import { useUnsaved } from "./use_unsaved.js";
 import Packs from "./packs.js";
@@ -19,7 +20,7 @@ const templates = {
     enabled: true,
   },
 };
-const labels = { skills: "Kỹ năng", agents: "Trợ lý", workflows: "Quy trình" };
+const labels = { get skills() { return uiText("Kỹ năng"); }, get agents() { return uiText("Trợ lý"); }, get workflows() { return uiText("Quy trình"); } };
 export default function Automation({ api, post, onDirtyChange }) {
   const [data, setData] = useState(null),
     [kind, setKind] = useState("workflows"),
@@ -83,11 +84,11 @@ export default function Automation({ api, post, onDirtyChange }) {
       className: "panel workspace-panel",
       style: { padding: 24, minWidth: 0 },
     },
-    h("h2", null, "Tự động hóa"),
+    h("h2", null, uiText("Tự động hóa")),
     h(
       "p",
       null,
-      "Kỹ năng và trợ lý định hướng nội dung. Quy trình chạy từng bước, lưu kết quả và dừng chờ phê duyệt công cụ theo quyền MCP. Hủy dừng các bước tiếp theo; thao tác đã gửi ra ngoài có thể đã thực hiện.",
+      uiText("Kỹ năng và trợ lý định hướng nội dung. Quy trình chạy từng bước, lưu kết quả và dừng chờ phê duyệt công cụ theo quyền MCP. Hủy dừng các bước tiếp theo; thao tác đã gửi ra ngoài có thể đã thực hiện."),
     ),
     error && h("p", { role: "alert" }, error),
     notice && h("p", { role: "status" }, notice),
@@ -98,11 +99,11 @@ export default function Automation({ api, post, onDirtyChange }) {
         h("button", { key: k, onClick: () => edit(k) }, label),
       ),
     ),
-    h("h3", null, `${id ? "Sửa" : "Tạo"} ${labels[kind].toLowerCase()}`),
+    h("h3", null, `${id ? uiText("Sửa") : uiText("Tạo")} ${labels[kind].toLowerCase()}`),
     h(
       "label",
       null,
-      "Tên",
+      uiText("Tên"),
       h("input", {
         value: draft.title,
         onChange: (e) => update({ title: e.target.value }),
@@ -112,7 +113,7 @@ export default function Automation({ api, post, onDirtyChange }) {
       h(
         "label",
         null,
-        "Hướng dẫn",
+        uiText("Hướng dẫn"),
         h("textarea", {
           value: draft.instruction,
           rows: 5,
@@ -123,7 +124,7 @@ export default function Automation({ api, post, onDirtyChange }) {
       h(
         "fieldset",
         null,
-        h("legend", null, "Kỹ năng của trợ lý"),
+        h("legend", null, uiText("Kỹ năng của trợ lý")),
         ...(data?.skills || []).map((s) =>
           h(
             "label",
@@ -146,7 +147,7 @@ export default function Automation({ api, post, onDirtyChange }) {
       h(
         "fieldset",
         null,
-        h("legend", null, "Phạm vi công cụ của trợ lý"),
+        h("legend", null, uiText("Phạm vi công cụ của trợ lý")),
         h(
           "label",
           null,
@@ -156,7 +157,7 @@ export default function Automation({ api, post, onDirtyChange }) {
             onChange: (e) =>
               update({ connectors: e.target.checked ? null : [] }),
           }),
-          " Dùng các kết nối được chủ cấp quyền",
+          uiText(" Dùng các kết nối được chủ cấp quyền"),
         ),
         draft.connectors != null &&
           connectors.map((c) =>
@@ -179,7 +180,7 @@ export default function Automation({ api, post, onDirtyChange }) {
         h(
           "small",
           null,
-          "Không chọn kết nối nào: chỉ soạn nội dung. Quyền tại MCP Hub vẫn áp dụng.",
+          uiText("Không chọn kết nối nào: chỉ soạn nội dung. Quyền tại MCP Hub vẫn áp dụng."),
         ),
       ),
     kind === "workflows" &&
@@ -189,14 +190,14 @@ export default function Automation({ api, post, onDirtyChange }) {
         h(
           "label",
           null,
-          "Trợ lý",
+          uiText("Trợ lý"),
           h(
             "select",
             {
               value: draft.agent_id || "",
               onChange: (e) => update({ agent_id: e.target.value || null }),
             },
-            h("option", { value: "" }, "Không dùng trợ lý"),
+            h("option", { value: "" }, uiText("Không dùng trợ lý")),
             ...(data?.agents || []).map((a) =>
               h("option", { key: a.id, value: a.id }, a.title),
             ),
@@ -206,21 +207,21 @@ export default function Automation({ api, post, onDirtyChange }) {
           h(
             "fieldset",
             { key: i },
-            h("legend", null, `Bước ${i + 1}`),
+            h("legend", null, uiText("Bước {0}", [i + 1])),
             h(
               "select",
               {
-                "aria-label": `Loại bước ${i + 1}`,
+                "aria-label": uiText("Loại bước {0}", [i + 1]),
                 value: s.kind,
                 onChange: (e) => step(i, { kind: e.target.value }),
               },
-              h("option", { value: "ai" }, "AI soạn nội dung"),
-              h("option", { value: "note" }, "Ghi chú / nhắc việc"),
-              h("option", { value: "mcp" }, "Gọi công cụ MCP"),
+              h("option", { value: "ai" }, uiText("AI soạn nội dung")),
+              h("option", { value: "note" }, uiText("Ghi chú / nhắc việc")),
+              h("option", { value: "mcp" }, uiText("Gọi công cụ MCP")),
             ),
             s.kind !== "mcp"
               ? h("textarea", {
-                  "aria-label": `Yêu cầu bước ${i + 1}`,
+                  "aria-label": uiText("Yêu cầu bước {0}", [i + 1]),
                   value: s.prompt || "",
                   onChange: (e) => step(i, { prompt: e.target.value }),
                 })
@@ -230,7 +231,7 @@ export default function Automation({ api, post, onDirtyChange }) {
                   h(
                     "label",
                     null,
-                    "Mã kết nối",
+                    uiText("Mã kết nối"),
                     h("input", {
                       value: s.connector || "",
                       onChange: (e) => step(i, { connector: e.target.value }),
@@ -239,7 +240,7 @@ export default function Automation({ api, post, onDirtyChange }) {
                   h(
                     "label",
                     null,
-                    "Tên công cụ",
+                    uiText("Tên công cụ"),
                     h("input", {
                       value: s.tool || "",
                       onChange: (e) => step(i, { tool: e.target.value }),
@@ -248,7 +249,7 @@ export default function Automation({ api, post, onDirtyChange }) {
                   h(
                     "label",
                     null,
-                    "Tham số JSON",
+                    uiText("Tham số JSON"),
                     h("textarea", {
                       value:
                         s.argumentsText ??
@@ -265,7 +266,7 @@ export default function Automation({ api, post, onDirtyChange }) {
                 onClick: () =>
                   update({ steps: draft.steps.filter((_, n) => n !== i) }),
               },
-              "Bỏ bước",
+              uiText("Bỏ bước"),
             ),
           ),
         ),
@@ -276,7 +277,7 @@ export default function Automation({ api, post, onDirtyChange }) {
             onClick: () =>
               update({ steps: [...draft.steps, { kind: "ai", prompt: "" }] }),
           },
-          "Thêm bước",
+          uiText("Thêm bước"),
         ),
       ),
     h(
@@ -287,7 +288,7 @@ export default function Automation({ api, post, onDirtyChange }) {
         checked: draft.enabled,
         onChange: (e) => update({ enabled: e.target.checked }),
       }),
-      " Bật",
+      uiText(" Bật"),
     ),
     h(
       "button",
@@ -314,10 +315,10 @@ export default function Automation({ api, post, onDirtyChange }) {
               id ? "PUT" : "POST",
             );
             edit(kind, null, true);
-            setNotice("Đã lưu.");
+            setNotice(uiText("Đã lưu."));
           }),
       },
-      "Lưu",
+      uiText("Lưu"),
     ),
     h("h3", null, labels[kind]),
     ...(data?.[kind] || []).map((item) =>
@@ -325,7 +326,7 @@ export default function Automation({ api, post, onDirtyChange }) {
         "article",
         { key: item.id, style: { padding: 12 } },
         h("strong", null, item.title),
-        h("button", { onClick: () => edit(kind, item) }, "Sửa"),
+        h("button", { onClick: () => edit(kind, item) }, uiText("Sửa")),
         kind === "workflows" &&
           h(
             "button",
@@ -334,16 +335,16 @@ export default function Automation({ api, post, onDirtyChange }) {
               onClick: () =>
                 run(async () => {
                   await post(`/automation/workflows/${item.id}/run`, {});
-                  setNotice("Đã đưa vào hàng đợi.");
+                  setNotice(uiText("Đã đưa vào hàng đợi."));
                 }),
             },
-            "Chạy",
+            uiText("Chạy"),
           ),
       ),
     ),
     h(Packs, { post, onSaved: reload }),
     h(Schedules, { data, api, post, onSaved: reload }),
-    h("h3", null, "Hộp kết quả"),
+    h("h3", null, uiText("Hộp kết quả")),
     ...(data?.runs || []).map((r) =>
       h(
         "details",
@@ -351,7 +352,7 @@ export default function Automation({ api, post, onDirtyChange }) {
         h(
           "summary",
           null,
-          `${r.definition.title} · ${r.status} · bước ${r.step}/${r.definition.steps.length}`,
+          uiText("{0} · {1} · bước {2}/{3}", [r.definition.title, r.status, r.step, r.definition.steps.length]),
         ),
         r.error && h("p", null, r.error),
         h(
@@ -363,7 +364,7 @@ export default function Automation({ api, post, onDirtyChange }) {
           h(
             "p",
             null,
-            "Mở mục Phê duyệt để xem và quyết định thao tác cụ thể.",
+            uiText("Mở mục Phê duyệt để xem và quyết định thao tác cụ thể."),
           ),
         ["queued", "running", "waiting"].includes(r.status) &&
           h(
@@ -372,7 +373,7 @@ export default function Automation({ api, post, onDirtyChange }) {
               onClick: () =>
                 run(() => post(`/automation/runs/${r.id}/cancel`, {})),
             },
-            "Hủy các bước tiếp theo",
+            uiText("Hủy các bước tiếp theo"),
           ),
       ),
     ),

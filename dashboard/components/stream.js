@@ -1,6 +1,7 @@
+import { t as uiText, localeTag } from "../i18n/runtime.js";
 /** Decode SSE independently of UTF-8 / TCP chunk boundaries, including multi-line data. */
 export async function* readSSE(body, { maxBytes = 2_000_000 } = {}) {
-  if (!body) throw new Error("API không trả về luồng dữ liệu.");
+  if (!body) throw new Error(uiText("API không trả về luồng dữ liệu."));
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "",
@@ -20,7 +21,7 @@ export async function* readSSE(body, { maxBytes = 2_000_000 } = {}) {
       const { value, done } = await reader.read();
       if (value) {
         bytes += value.byteLength;
-        if (bytes > maxBytes) throw new Error("Luồng dữ liệu vượt giới hạn.");
+        if (bytes > maxBytes) throw new Error(uiText("Luồng dữ liệu vượt giới hạn."));
       }
       buffer += done
         ? decoder.decode()
@@ -34,7 +35,7 @@ export async function* readSSE(body, { maxBytes = 2_000_000 } = {}) {
       }
       if (done) {
         if (buffer.trim())
-          throw new Error("Luồng SSE kết thúc giữa một sự kiện.");
+          throw new Error(uiText("Luồng SSE kết thúc giữa một sự kiện."));
         return;
       }
     }

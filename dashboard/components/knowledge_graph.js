@@ -1,3 +1,4 @@
+import { t as uiText, localeTag } from "../i18n/runtime.js";
 import React from "react";
 const h = React.createElement;
 
@@ -11,7 +12,7 @@ export default function KnowledgeGraph({ notes = [] }) {
   return h(
     "div",
     { className: "knowledge-links" },
-    h("h3", null, "Liên kết kiến thức"),
+    h("h3", null, uiText("Liên kết kiến thức")),
     edges.length
       ? h(
           "ul",
@@ -23,7 +24,7 @@ export default function KnowledgeGraph({ notes = [] }) {
       : h(
           "p",
           { className: "muted" },
-          "Dùng [[tên ghi chú]] để nối các ý tưởng.",
+          uiText("Dùng [[tên ghi chú]] để nối các ý tưởng."),
         ),
   );
 }

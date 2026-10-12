@@ -8,6 +8,7 @@ export default defineConfig({
   use: {
     baseURL: process.env.BDSG_TEST_URL || "http://127.0.0.1:8000",
     headless: true,
+    locale: "vi-VN",
     launchOptions: process.env.CHROME_BIN
       ? { executablePath: process.env.CHROME_BIN }
       : {},
